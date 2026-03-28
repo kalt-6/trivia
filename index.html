@@ -10,7 +10,7 @@
 
     <div id="home-screen" class="container screen active">
         <h1>Trivia Vault</h1>
-        <h2>Select a Quiz to Begin</h2>
+        <h2>Select a Quiz</h2>
         <ul id="quizzes-container">
             <li>Loading quizzes...</li>
         </ul>
@@ -20,15 +20,16 @@
         <h1 id="quiz-title">Quiz Title</h1>
         <h2 id="question-text">Question goes here...</h2>
         
-        <div id="options-container"></div>
+        <div id="options-container">
+            </div>
         
         <div id="feedback-text"></div>
         
-        <button id="next-btn" onclick="nextQuestion()" style="display: none; margin-top: 15px;">Next Question</button>
+        <button id="next-btn" onclick="nextQuestion()" style="display: none; margin-top: 20px;">Next Question</button>
     </div>
 
     <div id="results-screen" class="container screen">
-        <h1>Quiz Complete!</h1>
+        <h1>Results</h1>
         <h2 id="score-display">You scored: 0!</h2>
         <button onclick="returnHome()">Back to Menu</button>
     </div>
@@ -36,17 +37,20 @@
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     
     <script>
+        // --- 1. SUPABASE CONNECTION ---
         const supabaseUrl = 'https://pjjfnnzvwrhzvycjgkmz.supabase.co';
         const supabaseAnonKey = 'sb_publishable_J53ea-bCU35D1VSTK0l49A_b_BYW98W'; 
         const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
 
+        // --- 2. STATE VARIABLES ---
         let currentQuizId = null;
         let currentQuestions = [];
         let currentQuestionIndex = 0;
         let score = 0;
         let correctlyTypedAnswers = [];
-        let timerInterval; 
+        let timerInterval; // <--- This global variable fixes the ReferenceError!
 
+        // --- 3. DOM ELEMENTS ---
         const elements = {
             homeScreen: document.getElementById('home-screen'),
             quizScreen: document.getElementById('quiz-screen'),
@@ -60,8 +64,12 @@
             scoreDisplay: document.getElementById('score-display')
         };
 
-        async function init() { await fetchQuizzes(); }
+        // --- 4. INITIALIZATION ---
+        async function init() {
+            await fetchQuizzes();
+        }
 
+        // --- 5. FETCH DATA ---
         async function fetchQuizzes() {
             elements.quizzesContainer.innerHTML = '<li>Loading quizzes...</li>';
             const { data, error } = await supabaseClient.from('quizzes').select('*').order('id', { ascending: true });
@@ -90,7 +98,9 @@
             renderCurrentQuestion();
         }
 
+        // --- 6. RENDER LOGIC ---
         function renderCurrentQuestion() {
+            // Safely clear any existing timer
             if (timerInterval) clearInterval(timerInterval);
             
             const question = currentQuestions[currentQuestionIndex];
@@ -101,6 +111,7 @@
 
             const optionsArray = typeof question.options === 'string' ? JSON.parse(question.options) : question.options;
 
+            // Mode Selector
             if (optionsArray[0] === "TYPE_HINT") {
                 renderJetPunkGame(question, optionsArray.slice(1));
             } else if (optionsArray[0] === "TYPE") {
@@ -118,23 +129,32 @@
         async function handleGuess(questionId, selectedOption, buttonElement) {
             const allButtons = elements.optionsContainer.querySelectorAll('button');
             allButtons.forEach(btn => btn.disabled = true);
+
             elements.feedbackText.textContent = "Checking...";
             elements.feedbackText.className = '';
 
-            const { data: isCorrect, error } = await supabaseClient.rpc('check_quiz_answer', { q_id: questionId, user_guess: selectedOption });
+            const { data: isCorrect, error } = await supabaseClient.rpc('check_quiz_answer', {
+                q_id: questionId,
+                user_guess: selectedOption
+            });
+
+            if (error) {
+                console.error("Error checking answer:", error);
+                elements.feedbackText.textContent = "Error checking answer.";
+                return;
+            }
 
             if (isCorrect) {
                 buttonElement.style.backgroundColor = '#22c55e'; 
-                buttonElement.style.boxShadow = '0 6px 0px #16a34a';
                 elements.feedbackText.textContent = "Correct!";
                 elements.feedbackText.className = 'correct';
                 score++;
             } else {
                 buttonElement.style.backgroundColor = '#ef4444'; 
-                buttonElement.style.boxShadow = '0 6px 0px #dc2626';
                 elements.feedbackText.textContent = "Incorrect!";
                 elements.feedbackText.className = 'incorrect';
             }
+
             elements.nextBtn.style.display = 'block';
         }
 
@@ -144,16 +164,31 @@
             
             const input = document.createElement('input');
             input.type = 'text';
-            input.placeholder = 'Type an answer...';
+            input.placeholder = 'Type a country...';
+            input.style.width = '100%';
+            input.style.boxSizing = 'border-box';
+            input.style.padding = '15px';
+            input.style.fontSize = '1.2rem';
+            input.style.borderRadius = '12px';
+            input.style.border = '2px solid var(--primary)';
+            input.style.outline = 'none';
+            input.style.marginBottom = '20px';
+            input.style.display = 'block';
             
             const answersList = document.createElement('ul');
             answersList.id = 'typed-answers-list';
+            answersList.style.display = 'flex';
+            answersList.style.flexWrap = 'wrap';
+            answersList.style.justifyContent = 'center';
+            answersList.style.gap = '10px';
+            answersList.style.padding = '0';
 
             elements.optionsContainer.appendChild(input);
             elements.optionsContainer.appendChild(answersList);
 
             elements.nextBtn.textContent = "I'm Done / Next";
             elements.nextBtn.style.display = 'block';
+
             setTimeout(() => input.focus(), 100);
 
             input.addEventListener('input', function () {
@@ -162,50 +197,65 @@
                 
                 const matchedAnswer = validAnswers.find(answer => answer.toLowerCase() === guess);
 
-                if (matchedAnswer && !correctlyTypedAnswers.includes(matchedAnswer)) {
-                    correctlyTypedAnswers.push(matchedAnswer);
-                    score++; 
-                    
-                    const li = document.createElement('li');
-                    li.textContent = matchedAnswer;
-                    answersList.appendChild(li);
-                    
-                    elements.feedbackText.textContent = `Correct! (${correctlyTypedAnswers.length} / ${validAnswers.length})`;
-                    elements.feedbackText.className = 'correct';
-                    input.value = ''; 
+                if (matchedAnswer) {
+                    if (!correctlyTypedAnswers.includes(matchedAnswer)) {
+                        correctlyTypedAnswers.push(matchedAnswer);
+                        score++; 
+                        
+                        const li = document.createElement('li');
+                        li.textContent = matchedAnswer;
+                        li.style.background = '#22c55e'; 
+                        li.style.color = 'white';
+                        li.style.padding = '8px 15px';
+                        li.style.borderRadius = '20px';
+                        li.style.fontWeight = 'bold';
+                        answersList.appendChild(li);
+                        
+                        elements.feedbackText.textContent = `Correct! (${correctlyTypedAnswers.length} / ${validAnswers.length})`;
+                        elements.feedbackText.className = 'correct';
+                        
+                        input.value = ''; 
+                    }
                 }
             });
         }
 
+        // --- 7. JETPUNK MODE (HINTS + TIMER) ---
         function renderJetPunkGame(question, hintData) {
             correctlyTypedAnswers = [];
             const originalAnswers = question.correct_answer.split(',').map(a => a.trim());
             const validAnswers = originalAnswers.map(a => a.toLowerCase());
             
+            // Timer UI
             const timerBox = document.createElement('div');
-            timerBox.innerHTML = `<div style="font-size: 2.5rem; font-weight: 900; color: var(--secondary); margin-bottom: 15px;">⏱️ <span id="timer-sec">60</span>s</div>`;
+            timerBox.innerHTML = `<div style="font-size: 2.2rem; font-weight: 900; color: #ef4444; margin-bottom: 15px;">⏱️ <span id="timer-sec">60</span>s</div>`;
             elements.optionsContainer.appendChild(timerBox);
 
             const input = document.createElement('input');
             input.type = 'text';
             input.placeholder = 'Type an answer...';
+            input.style.width = '100%';
+            input.style.padding = '15px';
+            input.style.fontSize = '1.2rem';
+            input.style.borderRadius = '12px';
+            input.style.border = '3px solid var(--primary)';
+            input.style.marginBottom = '20px';
             input.autocomplete = 'off';
             elements.optionsContainer.appendChild(input);
 
             const grid = document.createElement('div');
             grid.style.display = 'grid';
             grid.style.gridTemplateColumns = '1fr 1fr';
-            grid.style.gap = '12px';
-            grid.style.marginBottom = '20px';
+            grid.style.gap = '10px';
             
             hintData.forEach((h, i) => {
                 const item = document.createElement('div');
                 item.style.border = '2px solid var(--primary)';
-                item.style.borderRadius = '12px';
-                item.style.padding = '12px';
-                item.style.background = '#f8fafc';
-                item.innerHTML = `<div style="font-size: 0.85rem; color: var(--text-light); text-transform: uppercase; margin-bottom: 4px; font-weight: bold;">${h.hint}</div>
-                                  <div class="answer-cell" style="font-weight: 900; color: #cbd5e1; font-size: 1.1rem;">???</div>`;
+                item.style.borderRadius = '8px';
+                item.style.padding = '10px';
+                item.style.background = 'white';
+                item.innerHTML = `<div style="font-size: 0.75rem; color: #64748b; text-transform: uppercase;">${h.hint}</div>
+                                  <div class="answer-cell" style="font-weight: 900; color: #e2e8f0;">???</div>`;
                 grid.appendChild(item);
             });
             elements.optionsContainer.appendChild(grid);
@@ -224,8 +274,8 @@
                     input.disabled = true;
                     input.placeholder = "Time's up!";
                     elements.feedbackText.textContent = "Game Over!";
-                    elements.feedbackText.className = 'incorrect';
                     
+                    // Reveal missed answers in Red
                     hintData.forEach((h, i) => {
                         const cell = grid.children[i].querySelector('.answer-cell');
                         if (cell.textContent === '???') {
@@ -250,19 +300,18 @@
                     
                     input.value = '';
                     elements.feedbackText.textContent = `Correct! (${correctlyTypedAnswers.length}/${validAnswers.length})`;
-                    elements.feedbackText.className = 'correct';
                     
                     if (correctlyTypedAnswers.length === validAnswers.length) {
                         clearInterval(timerInterval);
                         input.disabled = true;
-                        input.placeholder = "Perfect Score!";
-                        elements.feedbackText.textContent = "You got them all!";
+                        elements.feedbackText.textContent = "Perfect!";
                     }
                 }
             });
             setTimeout(() => input.focus(), 100);
         }
 
+        // --- 8. NAVIGATION ---
         function nextQuestion() {
             if (timerInterval) clearInterval(timerInterval);
             currentQuestionIndex++;
