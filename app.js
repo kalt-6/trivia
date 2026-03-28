@@ -301,17 +301,21 @@ window.App = {
 
         if (isTypeIn || isHintTypeIn) {
             // --- Typing Challenges ---
+            // THE FIX: Wrapped the input box in a sticky container so it stays at the top
             quizHtml += `
-                <div class="flex justify-between items-center mb-4 px-4 bg-background p-3 rounded-xl border-2 border-primary">
-                    <div class="text-2xl font-black ${isHintTypeIn ? 'text-red-500' : 'hidden'}"><i class="fas fa-stopwatch mr-2"></i><span id="timer-display">60</span>s</div>
-                    <div id="feedback" class="text-xl font-black uppercase tracking-wide text-text-light">Start Typing...</div>
+                <div class="sticky top-0 z-30 bg-surface pb-4 mb-2 pt-2 border-b border-transparent shadow-[0_15px_15px_-15px_rgba(0,0,0,0.1)]">
+                    <div class="flex justify-between items-center mb-4 px-4 bg-background p-3 rounded-xl border-2 border-primary">
+                        <div class="text-2xl font-black ${isHintTypeIn ? 'text-red-500' : 'hidden'}"><i class="fas fa-stopwatch mr-2"></i><span id="timer-display">60</span>s</div>
+                        <div id="feedback" class="text-xl font-black uppercase tracking-wide text-text-light">Start Typing...</div>
+                    </div>
+                    <input type="text" id="type-input" class="w-full bg-surface border-4 border-primary p-5 rounded-2xl text-text-main text-2xl font-bold text-center focus:border-secondary focus:ring-0 outline-none transition-all shadow-inner" placeholder="Type answer here..." autocomplete="off">
                 </div>
-                <input type="text" id="type-input" class="w-full bg-surface border-4 border-primary p-5 rounded-2xl mb-6 text-text-main text-2xl font-bold text-center focus:border-secondary focus:ring-0 outline-none transition-all shadow-inner" placeholder="Type answer here..." autocomplete="off">
             `;
 
             if (isHintTypeIn) {
                 const hintData = optionsArray.slice(1);
-                quizHtml += `<div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">`;
+                // THE FIX: Added max-h-[45vh] and overflow-y-auto so ONLY the grid scrolls
+                quizHtml += `<div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6 max-h-[45vh] overflow-y-auto p-2 border-2 border-background rounded-xl bg-background/30 shadow-inner">`;
                 hintData.forEach((h, i) => {
                     quizHtml += `
                     <div class="flex border-2 border-primary rounded-xl overflow-hidden shadow-sm bg-surface transition-colors duration-300">
@@ -321,7 +325,8 @@ window.App = {
                 });
                 quizHtml += `</div>`;
             } else {
-                quizHtml += `<ul id="typed-answers-list" class="flex flex-wrap justify-center gap-3 mb-6 p-0 list-none min-h-[50px]"></ul>`;
+                // THE FIX: Added scrolling to the generic typing challenge list as well
+                quizHtml += `<ul id="typed-answers-list" class="flex flex-wrap justify-center gap-3 mb-6 p-4 list-none min-h-[50px] max-h-[45vh] overflow-y-auto border-2 border-background rounded-xl bg-background/30 shadow-inner"></ul>`;
             }
             quizHtml += `</div><button onclick="App.nextQuestion()" class="btn-3d w-full bg-text-light text-white py-4 mt-4 rounded-xl font-black text-lg md:text-xl tracking-widest uppercase hover:bg-text-main">I'm Done / Next</button></div>`;
         
