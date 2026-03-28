@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trivia Vault</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Trivia Vault</h1>
+        
+        <div id="quiz-list-screen" class="screen active">
+            <h2>Select a Quiz</h2>
+            <div id="loading-text">Loading quizzes...</div>
+            <ul id="quizzes-container"></ul>
+        </div>
+
+        <div id="game-screen" class="screen">
+            <button id="back-btn">← Back to Quizzes</button>
+            <h2 id="question-text">Loading question...</h2>
+            <div id="options-container"></div>
+            <p id="feedback-text"></p>
+            <button id="next-btn" style="display: none;">Next Question</button>
+        </div>
+    </div>
+
+    <script type="module" src="app.js"></script>
+</body>
+</html>
