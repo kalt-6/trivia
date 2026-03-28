@@ -3,444 +3,337 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Trivia Vault | Playful Edition</title>
-    
-    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800;900&display=swap" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <script src="https://cdn.tailwindcss.com"></script>
-    
-    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        primary: '#8b5cf6', 'primary-hover': '#7c3aed',
-                        secondary: '#ec4899', accent: '#f59e0b',
-                        background: '#fdf4ff', surface: '#ffffff',
-                        'text-main': '#1e293b', 'text-light': '#64748b',
-                    },
-                    fontFamily: { sans: ['Nunito', 'sans-serif'] }
-                }
-            }
-        }
-    </script>
-
-    <style>
-        body { 
-            background-color: #fdf4ff; 
-            background-image: radial-gradient(#f59e0b 2px, transparent 2px); 
-            background-size: 30px 30px; color: #1e293b; 
-        }
-        .bouncy-card {
-            border-radius: 24px; border: 4px solid #8b5cf6; background: #ffffff;
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
-        }
-        .fade-in { animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-        @keyframes popIn { 0% { transform: scale(0.9); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
-
-        /* Hide scrollbar for the filter menu but keep functionality */
-        .no-scrollbar::-webkit-scrollbar { display: none; }
-        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-
-        /* Buttons */
-        .btn-3d { transition: all 0.2s ease; box-shadow: 0 6px 0px #7c3aed; }
-        .btn-3d:hover:not(:disabled) { transform: translateY(2px); box-shadow: 0 4px 0px #7c3aed; }
-        .btn-3d:active:not(:disabled) { transform: translateY(6px); box-shadow: none; }
-        .opt-0 { background-color: #ef4444; box-shadow: 0 6px 0px #b91c1c; color: white;}
-        .opt-1 { background-color: #3b82f6; box-shadow: 0 6px 0px #1d4ed8; color: white;}
-        .opt-2 { background-color: #eab308; box-shadow: 0 6px 0px #a16207; color: white;}
-        .opt-3 { background-color: #22c55e; box-shadow: 0 6px 0px #15803d; color: white;}
-        .opt-btn:hover:not(:disabled) { filter: brightness(1.1); transform: translateY(2px); }
-        .opt-btn:active:not(:disabled) { transform: translateY(6px); box-shadow: none; }
-    </style>
+    <title>Trivia Vault</title>
+    <link rel="stylesheet" href="style.css">
 </head>
-<body class="min-h-screen flex flex-col font-sans">
+<body>
 
-    <nav class="bg-surface border-b-4 border-primary sticky top-0 z-50 shadow-md">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-16">
-            <div class="flex items-center cursor-pointer transform transition hover:scale-105" onclick="init()">
-                <i class="fas fa-brain text-primary text-3xl mr-3"></i>
-                <span class="font-extrabold text-2xl tracking-tight text-text-main uppercase">Trivia<span class="text-primary">Vault</span></span>
+    <div id="home-screen" class="container screen active">
+        <h1>Trivia Vault</h1>
+        <h2>Select a Quiz</h2>
+        <ul id="quizzes-container">
+            <li>Loading quizzes...</li>
+        </ul>
+    </div>
+
+    <div id="quiz-screen" class="container screen">
+        <h1 id="quiz-title">Quiz Title</h1>
+        <h2 id="question-text">Question goes here...</h2>
+        
+        <div id="options-container">
             </div>
-            <div class="flex space-x-4">
-                <button onclick="init()" class="text-text-light hover:text-primary text-lg font-bold">Home</button>
-            </div>
-        </div>
-    </nav>
+        
+        <div id="feedback-text"></div>
+        
+        <button id="next-btn" onclick="nextQuestion()" style="display: none; margin-top: 20px;">Next Question</button>
+    </div>
 
-    <main class="flex-grow w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8" id="app-root">
-        </main>
+    <div id="results-screen" class="container screen">
+        <h1>Results</h1>
+        <h2 id="score-display">You scored: 0!</h2>
+        <button onclick="returnHome()">Back to Menu</button>
+    </div>
 
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    
     <script>
         // --- 1. SUPABASE CONNECTION ---
         const supabaseUrl = 'https://pjjfnnzvwrhzvycjgkmz.supabase.co';
-        const supabaseAnonKey = 'sb_publishable_J53ea-bCU35D1VSTK0l49A_b_BYW98W';
+        const supabaseAnonKey = 'sb_publishable_J53ea-bCU35D1VSTK0l49A_b_BYW98W'; 
         const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
 
         // --- 2. STATE VARIABLES ---
-        const appRoot = document.getElementById('app-root');
-        let quizzes = []; 
-        let state = { 
-            activeFilter: 'All', // NEW: Tracks the current category
-            currentQuizId: null, currentQuizTitle: "", currentQuestions: [], 
-            currentIndex: 0, score: 0, isProcessing: false 
-        };
+        let currentQuizId = null;
+        let currentQuestions = [];
+        let currentQuestionIndex = 0;
+        let score = 0;
         let correctlyTypedAnswers = [];
+        let timerInterval;
 
-        // --- NEW: AUTO-CATEGORIZER LOGIC ---
-        function getQuizCategory(quiz) {
-            const text = (quiz.title + " " + quiz.description).toLowerCase();
-            if (text.includes('type')) return 'Typing Challenges';
-            if (text.includes('countr') || text.includes('capit') || text.includes('geography') || text.includes('states') || text.includes('continents') || text.includes('ocean')) return 'Geography';
-            if (text.includes('scienc') || text.includes('biolog') || text.includes('space') || text.includes('gas') || text.includes('planet')) return 'Science';
-            if (text.includes('movi') || text.includes('game') || text.includes('pop') || text.includes('potter') || text.includes('90s')) return 'Pop Culture';
-            if (text.includes('art') || text.includes('mytholog') || text.includes('histor') || text.includes('language') || text.includes('zodiac')) return 'History & Arts';
-            if (text.includes('sport') || text.includes('food') || text.includes('culinary') || text.includes('drink')) return 'Sports & Food';
-            return 'General';
+        // --- 3. DOM ELEMENTS ---
+        const elements = {
+            homeScreen: document.getElementById('home-screen'),
+            quizScreen: document.getElementById('quiz-screen'),
+            resultsScreen: document.getElementById('results-screen'),
+            quizzesContainer: document.getElementById('quizzes-container'),
+            quizTitle: document.getElementById('quiz-title'),
+            questionText: document.getElementById('question-text'),
+            optionsContainer: document.getElementById('options-container'),
+            feedbackText: document.getElementById('feedback-text'),
+            nextBtn: document.getElementById('next-btn'),
+            scoreDisplay: document.getElementById('score-display')
+        };
+
+        // --- 4. INITIALIZATION ---
+        async function init() {
+            await fetchQuizzes();
         }
 
-        const categories = ['All', 'Typing Challenges', 'Geography', 'Science', 'Pop Culture', 'History & Arts', 'Sports & Food', 'General'];
-
-        // --- 3. INITIAL LOAD ---
-        async function init() {
-            window.scrollTo(0,0);
-            state.activeFilter = 'All'; // Reset filter on home
-            appRoot.innerHTML = `<div class="flex flex-col items-center justify-center mt-32 fade-in"><i class="fas fa-circle-notch fa-spin text-6xl text-primary mb-6"></i><h2 class="text-3xl font-extrabold text-primary tracking-wide uppercase">Opening Vault...</h2></div>`;
-
+        // --- 5. FETCH DATA ---
+        async function fetchQuizzes() {
+            elements.quizzesContainer.innerHTML = '<li>Loading quizzes...</li>';
             const { data, error } = await supabaseClient.from('quizzes').select('*').order('id', { ascending: true });
+            if (error) return;
+            elements.quizzesContainer.innerHTML = '';
+            data.forEach(quiz => {
+                const li = document.createElement('li');
+                const btn = document.createElement('button');
+                btn.textContent = quiz.title;
+                btn.onclick = () => startQuiz(quiz.id, quiz.title);
+                li.appendChild(btn);
+                elements.quizzesContainer.appendChild(li);
+            });
+        }
+
+        async function startQuiz(quizId, title) {
+            currentQuizId = quizId;
+            currentQuestionIndex = 0;
+            score = 0;
+            elements.quizTitle.textContent = title;
+            elements.homeScreen.classList.remove('active');
+            elements.quizScreen.classList.add('active');
+            const { data, error } = await supabaseClient.from('questions').select('*').eq('quiz_id', quizId);
+            if (error) return;
+            currentQuestions = data;
+            renderCurrentQuestion();
+        }
+
+        // --- 6. RENDER LOGIC ---
+        function renderCurrentQuestion() {
+            // Safely clear any existing timer
+            if (timerInterval) clearInterval(timerInterval);
+            
+            const question = currentQuestions[currentQuestionIndex];
+            elements.questionText.textContent = question.question_text;
+            elements.optionsContainer.innerHTML = '';
+            elements.feedbackText.textContent = '';
+            elements.nextBtn.style.display = 'none';
+
+            const optionsArray = typeof question.options === 'string' ? JSON.parse(question.options) : question.options;
+
+            // Mode Selector
+            if (optionsArray[0] === "TYPE_HINT") {
+                renderJetPunkGame(question, optionsArray.slice(1));
+            } else if (optionsArray[0] === "TYPE") {
+                renderTypingGame(question);
+            } else {
+                optionsArray.forEach(option => {
+                    const btn = document.createElement('button');
+                    btn.textContent = option;
+                    btn.onclick = () => handleGuess(question.id, option, btn);
+                    elements.optionsContainer.appendChild(btn);
+                });
+            }
+        }
+
+        async function handleGuess(questionId, selectedOption, buttonElement) {
+            const allButtons = elements.optionsContainer.querySelectorAll('button');
+            allButtons.forEach(btn => btn.disabled = true);
+
+            elements.feedbackText.textContent = "Checking...";
+            elements.feedbackText.className = '';
+
+            const { data: isCorrect, error } = await supabaseClient.rpc('check_quiz_answer', {
+                q_id: questionId,
+                user_guess: selectedOption
+            });
 
             if (error) {
-                console.error('Error fetching quizzes:', error);
-                appRoot.innerHTML = `<div class="text-center text-red-500 mt-20 bouncy-card p-10 max-w-md mx-auto"><i class="fas fa-exclamation-triangle text-5xl mb-4"></i><h2 class="text-3xl font-black uppercase">Database Error</h2></div>`;
+                console.error("Error checking answer:", error);
+                elements.feedbackText.textContent = "Error checking answer.";
                 return;
             }
 
-            // Tag each quiz with a category
-            quizzes = data.map(quiz => ({ ...quiz, category: getQuizCategory(quiz) }));
-            renderHome();
-        }
-
-        // --- NEW: FILTER FUNCTION ---
-        function setFilter(category) {
-            state.activeFilter = category;
-            renderHome();
-        }
-
-        // --- 4. RENDER HOME SCREEN ---
-        function renderHome() {
-            // Filter the quizzes based on selection
-            const displayedQuizzes = state.activeFilter === 'All' 
-                ? quizzes 
-                : quizzes.filter(q => q.category === state.activeFilter);
-
-            // Generate Filter Pills HTML
-            let filterHtml = `<div class="flex overflow-x-auto gap-3 pb-4 mb-8 justify-start no-scrollbar fade-in px-4 w-full">`;
-            categories.forEach(cat => {
-                const isActive = state.activeFilter === cat;
-                const baseClasses = "px-6 py-2 rounded-full font-black text-sm uppercase tracking-widest whitespace-nowrap transition-all cursor-pointer border-2";
-                const activeClasses = isActive 
-                    ? "bg-primary text-white border-primary shadow-lg transform scale-105" 
-                    : "bg-surface text-text-light border-gray-200 hover:border-primary hover:text-primary";
-                
-                filterHtml += `<button onclick="setFilter('${cat}')" class="${baseClasses} ${activeClasses}">${cat}</button>`;
-            });
-            filterHtml += `</div>`;
-
-            // Generate Header and Grid
-            let html = `
-                <div class="text-center mb-8 fade-in">
-                    <h1 class="text-5xl md:text-6xl font-black text-primary mb-4 uppercase tracking-wider text-shadow">Select a Quiz!</h1>
-                </div>
-                ${filterHtml}
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 fade-in">
-            `;
-
-            const icons = ['fa-globe-americas', 'fa-music', 'fa-paw', 'fa-hamburger', 'fa-film', 'fa-rocket', 'fa-keyboard'];
-
-            if (displayedQuizzes.length === 0) {
-                html += `<div class="col-span-full text-center py-10 text-text-light font-bold text-xl">No quizzes found in this category yet!</div>`;
+            if (isCorrect) {
+                buttonElement.style.backgroundColor = '#22c55e'; 
+                elements.feedbackText.textContent = "Correct!";
+                elements.feedbackText.className = 'correct';
+                score++;
+            } else {
+                buttonElement.style.backgroundColor = '#ef4444'; 
+                elements.feedbackText.textContent = "Incorrect!";
+                elements.feedbackText.className = 'incorrect';
             }
 
-            displayedQuizzes.forEach((quiz, index) => {
-                const icon = icons[index % icons.length];
-                html += `
-                    <div class="bouncy-card overflow-hidden hover:border-secondary transition-all duration-300 transform hover:-translate-y-2 cursor-pointer flex flex-col h-full bg-surface" onclick="startQuiz('${quiz.id}', '${quiz.title.replace(/'/g, "\\'")}')">
-                        <div class="p-6 flex-grow text-center relative">
-                            <span class="absolute top-4 left-4 bg-background text-primary text-xs font-black px-3 py-1 rounded-full uppercase border border-primary">${quiz.category}</span>
-                            
-                            <div class="w-16 h-16 bg-background rounded-full flex items-center justify-center mx-auto mb-4 mt-6 border-2 border-primary">
-                                <i class="fas ${icon} text-primary text-3xl"></i>
-                            </div>
-                            <h3 class="text-2xl font-extrabold text-text-main mb-2 uppercase tracking-wide">${quiz.title}</h3>
-                            <p class="text-text-light font-bold text-sm">${quiz.description}</p>
-                        </div>
-                        <div class="bg-primary p-4 text-center mt-auto">
-                             <span class="text-white font-black text-lg uppercase tracking-widest">Play Now <i class="fas fa-play ml-2"></i></span>
-                        </div>
-                    </div>
-                `;
-            });
-
-            html += `</div>`;
-            appRoot.innerHTML = html;
+            elements.nextBtn.style.display = 'block';
         }
 
-        // --- 5. START QUIZ ---
-        async function startQuiz(quizId, title) {
-            window.scrollTo(0,0);
-            appRoot.innerHTML = `<div class="text-center mt-32 text-primary fade-in"><i class="fas fa-spinner fa-spin text-6xl mb-6"></i><h2 class="text-3xl font-black uppercase">Loading Questions...</h2></div>`;
+        function renderTypingGame(question) {
+            correctlyTypedAnswers = []; 
+            const validAnswers = question.correct_answer.split(',').map(a => a.trim());
             
-            const { data, error } = await supabaseClient.from('questions').select('*').eq('quiz_id', quizId);
-
-            if (error || data.length === 0) {
-                alert("Error loading questions!");
-                init();
-                return;
-            }
-
-            state = { ...state, currentQuizId: quizId, currentQuizTitle: title, currentQuestions: data, currentIndex: 0, score: 0, isProcessing: false };
-            renderQuizStep();
-        }
-
-        // --- 6. RECOMMENDATION ALGORITHM ---
-        function getRelatedQuizzes() {
-            const currentQuiz = quizzes.find(q => q.id === state.currentQuizId);
-            if (!currentQuiz) return [];
-
-            const stopWords = ['the', 'a', 'an', 'and', 'or', 'in', 'on', 'with', 'to', 'for', 'of', 'how', 'many', 'what', 'which', 'is', 'are', 'test', 'your', 'knowledge'];
-            const getWords = (text) => (text || '').toLowerCase().match(/\b\w+\b/g)?.filter(w => !stopWords.includes(w)) || [];
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.placeholder = 'Type a country...';
+            input.style.width = '100%';
+            input.style.boxSizing = 'border-box';
+            input.style.padding = '15px';
+            input.style.fontSize = '1.2rem';
+            input.style.borderRadius = '12px';
+            input.style.border = '2px solid var(--primary)';
+            input.style.outline = 'none';
+            input.style.marginBottom = '20px';
+            input.style.display = 'block';
             
-            const targetWords = [...getWords(currentQuiz.title), ...getWords(currentQuiz.description)];
+            const answersList = document.createElement('ul');
+            answersList.id = 'typed-answers-list';
+            answersList.style.display = 'flex';
+            answersList.style.flexWrap = 'wrap';
+            answersList.style.justifyContent = 'center';
+            answersList.style.gap = '10px';
+            answersList.style.padding = '0';
 
-            let scoredQuizzes = quizzes
-                .filter(q => q.id !== state.currentQuizId) 
-                .map(q => {
-                    let score = 0;
-                    if (q.category === currentQuiz.category) score += 5; // HIGH priority to same category
-                    
-                    const titleWords = getWords(q.title);
-                    const descWords = getWords(q.description);
-                    
-                    targetWords.forEach(word => {
-                        if (titleWords.includes(word)) score += 3; 
-                        if (descWords.includes(word)) score += 1;  
-                    });
-                    return { ...q, score };
-                });
+            elements.optionsContainer.appendChild(input);
+            elements.optionsContainer.appendChild(answersList);
 
-            scoredQuizzes.sort((a, b) => b.score - a.score);
+            elements.nextBtn.textContent = "I'm Done / Next";
+            elements.nextBtn.style.display = 'block';
 
-            if (scoredQuizzes.length > 0 && scoredQuizzes[0].score === 0) {
-                scoredQuizzes = scoredQuizzes.sort(() => 0.5 - Math.random());
-            }
+            setTimeout(() => input.focus(), 100);
 
-            return scoredQuizzes.slice(0, 3);
-        }
-
-        function renderSidebar() {
-            const related = getRelatedQuizzes();
-            if (related.length === 0) return '';
-
-            let html = `
-                <div class="bouncy-card p-6 sticky top-24 bg-surface">
-                    <h3 class="text-lg font-black text-primary mb-4 uppercase tracking-widest border-b-2 border-background pb-3"><i class="fas fa-fire mr-2"></i>Also Try</h3>
-                    <div class="space-y-4">
-            `;
-            related.forEach(q => {
-                html += `
-                    <div onclick="startQuiz('${q.id}', '${q.title.replace(/'/g, "\\'")}')" class="group cursor-pointer bg-background rounded-xl p-4 border-2 border-transparent hover:border-secondary transition-all">
-                        <span class="text-[10px] font-black uppercase text-primary mb-1 block">${q.category}</span>
-                        <h4 class="font-bold text-text-main group-hover:text-secondary transition-colors leading-tight mb-1">${q.title}</h4>
-                        <p class="text-xs text-text-light line-clamp-2">${q.description}</p>
-                    </div>
-                `;
-            });
-            html += `</div></div>`;
-            return html;
-        }
-
-// --- 7. RENDER QUESTION SCREEN (WITH SIDEBAR & TIMER) ---
-function renderQuizStep() {
-    clearInterval(timerInterval); // Reset timer if running
-    const question = state.currentQuestions[state.currentIndex];
-    
-    const optionsArray = typeof question.options === 'string' ? JSON.parse(question.options) : question.options;
-    const isTypeIn = optionsArray.length === 1 && optionsArray[0] === "TYPE";
-    const isHintTypeIn = optionsArray.length > 1 && optionsArray[0] === "TYPE_HINT"; // New Jetpunk Mode
-
-    let quizHtml = `
-        <div class="bouncy-card p-6 md:p-10 fade-in text-center flex-grow">
-            <div class="flex justify-center items-center mb-6">
-                <span class="bg-background text-primary border-2 border-primary font-black px-4 py-2 rounded-full tracking-widest uppercase text-xs md:text-sm">
-                    ${state.currentQuizTitle} - Q${state.currentIndex + 1}/${state.currentQuestions.length}
-                </span>
-            </div>
-            <h2 class="text-2xl md:text-4xl font-black mb-8 text-text-main leading-tight">${question.question_text}</h2>
-    `;
-
-    if (isTypeIn || isHintTypeIn) {
-        // Add Timer UI
-        quizHtml += `
-            <div class="flex justify-between items-center mb-4 px-4">
-                <div class="text-2xl font-black ${isHintTypeIn ? 'text-red-500' : 'hidden'}"><i class="fas fa-stopwatch mr-2"></i><span id="timer-display">60</span>s</div>
-                <div id="feedback" class="text-xl font-black uppercase tracking-wide"></div>
-            </div>
-            <input type="text" id="type-input" autofocus class="w-full bg-surface border-4 border-primary p-5 rounded-2xl mb-6 text-text-main text-2xl font-bold text-center focus:border-secondary focus:ring-0 outline-none transition-all shadow-inner" placeholder="Type answer here..." autocomplete="off">
-        `;
-
-        if (isHintTypeIn) {
-            // Build the JetPunk Style Hint Grid
-            const hintData = optionsArray.slice(1);
-            quizHtml += `<div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">`;
-            hintData.forEach((h, i) => {
-                quizHtml += `
-                <div class="flex border-2 border-primary rounded-xl overflow-hidden shadow-sm bg-surface">
-                    <div class="bg-background text-primary font-black p-3 w-1/3 border-r-2 border-primary flex items-center justify-center text-center text-sm">${h.hint}</div>
-                    <div id="ans-${i}" class="p-3 w-2/3 font-bold flex items-center justify-center text-center text-gray-300 transition-colors">???</div>
-                </div>`;
-            });
-            quizHtml += `</div>`;
-        } else {
-            quizHtml += `<ul id="typed-answers-list" class="flex flex-wrap justify-center gap-3 mb-6 p-0 list-none"></ul>`;
-        }
-        
-        quizHtml += `<button onclick="nextQuestion()" class="btn-3d w-full bg-text-light text-white py-4 rounded-xl font-black text-lg md:text-xl tracking-widest uppercase">I'm Done / Next</button></div>`;
-    } else {
-        // ... (Keep your existing Multiple Choice HTML generation here) ...
-        let optionsHtml = `<div class="grid grid-cols-1 sm:grid-cols-2 gap-4" id="btn-grid">`;
-        optionsArray.forEach((opt, i) => {
-            optionsHtml += `<button onclick="submitMC('${question.id}', '${opt.replace(/'/g, "\\'")}', this)" class="opt-btn opt-${i % 4} btn-3d w-full p-6 rounded-2xl font-black text-lg md:text-2xl shadow-sm flex items-center justify-center text-center border-none">${opt}</button>`;
-        });
-        optionsHtml += `</div>`;
-        quizHtml += `${optionsHtml}<div id="feedback" class="mt-8 h-10 text-2xl md:text-3xl font-black uppercase tracking-wide"></div><button id="next-btn" onclick="nextQuestion()" class="btn-3d w-full bg-primary text-white py-4 mt-6 rounded-xl font-black text-lg md:text-xl tracking-widest uppercase hidden">Next Question</button></div>`;
-    }
-
-    appRoot.innerHTML = `<div class="flex flex-col lg:flex-row gap-8 max-w-7xl mx-auto items-start"><div class="w-full lg:w-2/3 xl:w-3/4">${quizHtml}</div><div class="w-full lg:w-1/3 xl:w-1/4">${renderSidebar()}</div></div>`;
-    
-    if (isTypeIn || isHintTypeIn) setupTypingLogic(question, isHintTypeIn, isHintTypeIn ? optionsArray.slice(1) : []);
-}
-
-// --- 9. HANDLING JETPUNK TYPING & TIMERS ---
-function setupTypingLogic(question, isHintTypeIn, hintData) {
-    correctlyTypedAnswers = []; 
-    const originalAnswers = question.correct_answer.split(',').map(a => a.trim());
-    const validAnswers = originalAnswers.map(a => a.toLowerCase()); // For checking
-    
-    const input = document.getElementById('type-input');
-    const feedback = document.getElementById('feedback');
-    const timerDisplay = document.getElementById('timer-display');
-
-    // Run the 60 Second Timer
-    if (isHintTypeIn) {
-        let timeLeft = 60;
-        timerInterval = setInterval(() => {
-            timeLeft--;
-            timerDisplay.textContent = timeLeft;
-            if (timeLeft <= 0) {
-                clearInterval(timerInterval);
-                input.disabled = true;
-                input.placeholder = "Time's up!";
-                feedback.innerHTML = `<span class="text-red-500">Time's Up!</span>`;
+            input.addEventListener('input', function () {
+                const guess = input.value.trim().toLowerCase();
+                if (guess === '') return;
                 
-                // Reveal the answers they missed in red!
-                hintData.forEach((h, i) => {
-                    const cell = document.getElementById(`ans-${i}`);
-                    if (cell.textContent === '???') {
-                        cell.textContent = h.answer;
-                        cell.classList.remove('text-gray-300');
-                        cell.classList.add('text-red-400', 'bg-red-50');
+                const matchedAnswer = validAnswers.find(answer => answer.toLowerCase() === guess);
+
+                if (matchedAnswer) {
+                    if (!correctlyTypedAnswers.includes(matchedAnswer)) {
+                        correctlyTypedAnswers.push(matchedAnswer);
+                        score++; 
+                        
+                        const li = document.createElement('li');
+                        li.textContent = matchedAnswer;
+                        li.style.background = '#22c55e'; 
+                        li.style.color = 'white';
+                        li.style.padding = '8px 15px';
+                        li.style.borderRadius = '20px';
+                        li.style.fontWeight = 'bold';
+                        answersList.appendChild(li);
+                        
+                        elements.feedbackText.textContent = `Correct! (${correctlyTypedAnswers.length} / ${validAnswers.length})`;
+                        elements.feedbackText.className = 'correct';
+                        
+                        input.value = ''; 
                     }
-                });
-            }
-        }, 1000);
-    }
-
-    setTimeout(() => input.focus(), 100);
-
-    input.addEventListener('input', function () {
-        const guess = input.value.trim().toLowerCase();
-        if (guess === '') return;
-        
-        const matchIndex = validAnswers.findIndex(answer => answer === guess);
-
-        if (matchIndex !== -1 && !correctlyTypedAnswers.includes(validAnswers[matchIndex])) {
-            const matchedAnswer = originalAnswers[matchIndex];
-            correctlyTypedAnswers.push(validAnswers[matchIndex]);
-            state.score++; 
-            
-            if (isHintTypeIn) {
-                // Update the grid cell!
-                const cell = document.getElementById(`ans-${matchIndex}`);
-                if (cell) {
-                    cell.textContent = matchedAnswer;
-                    cell.classList.remove('text-gray-300');
-                    cell.classList.add('text-white', 'bg-green-500');
-                }
-            } else {
-                // Standard visual list
-                const answersList = document.getElementById('typed-answers-list');
-                const li = document.createElement('li');
-                li.innerHTML = `<span class="bg-green-500 text-white font-black px-4 py-2 rounded-full md:text-lg shadow-md block fade-in"><i class="fas fa-check mr-2"></i>${matchedAnswer}</span>`;
-                answersList.appendChild(li);
-            }
-            
-            feedback.innerHTML = `<span class="text-green-500">Found: ${correctlyTypedAnswers.length} / ${validAnswers.length}</span>`;
-            input.value = ''; 
-
-            // Did they win early?
-            if (correctlyTypedAnswers.length === validAnswers.length) {
-                clearInterval(timerInterval);
-                input.disabled = true;
-                input.placeholder = "Perfect Score!";
-                feedback.innerHTML = `<span class="text-green-500">You got them all!</span>`;
-            }
-        }
-    });
-}
-
-        // --- 10. NAVIGATION & RESULTS ---
-        function nextQuestion() {
-            state.isProcessing = false;
-            state.currentIndex++;
-            if (state.currentIndex < state.currentQuestions.length) {
-                renderQuizStep();
-            } else {
-                renderResults();
-            }
-        }
-
-        function renderResults() {
-            let totalPossible = 0;
-            state.currentQuestions.forEach(q => {
-                const opts = typeof q.options === 'string' ? JSON.parse(q.options) : q.options;
-                if (opts.length === 1 && opts[0] === "TYPE") {
-                    totalPossible += q.correct_answer.split(',').length;
-                } else {
-                    totalPossible += 1;
                 }
             });
-
-            appRoot.innerHTML = `
-                <div class="max-w-lg mx-auto text-center bouncy-card p-12 fade-in mt-10">
-                    <div class="w-24 h-24 bg-primary rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg border-4 border-background">
-                        <i class="fas fa-trophy text-5xl text-accent"></i>
-                    </div>
-                    <h2 class="text-4xl font-black mb-2 text-text-main uppercase tracking-widest">Quiz Complete!</h2>
-                    
-                    <div class="text-7xl font-black text-primary my-8 tracking-tighter drop-shadow-md">
-                        ${state.score} <span class="text-3xl text-text-light">/ ${totalPossible}</span>
-                    </div>
-                    
-                    <div class="space-y-4 mt-8">
-                        <button onclick="init()" class="btn-3d w-full bg-secondary text-white py-4 rounded-xl font-black text-xl uppercase tracking-widest">Back to Vault</button>
-                    </div>
-                </div>
-            `;
         }
 
-        document.addEventListener('DOMContentLoaded', init);
+        // --- 7. JETPUNK MODE (HINTS + TIMER) ---
+        function renderJetPunkGame(question, hintData) {
+            correctlyTypedAnswers = [];
+            const originalAnswers = question.correct_answer.split(',').map(a => a.trim());
+            const validAnswers = originalAnswers.map(a => a.toLowerCase());
+            
+            // Timer UI
+            const timerBox = document.createElement('div');
+            timerBox.innerHTML = `<div style="font-size: 2.2rem; font-weight: 900; color: #ef4444; margin-bottom: 15px;">⏱️ <span id="timer-sec">60</span>s</div>`;
+            elements.optionsContainer.appendChild(timerBox);
+
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.placeholder = 'Type an answer...';
+            input.style.width = '100%';
+            input.style.padding = '15px';
+            input.style.fontSize = '1.2rem';
+            input.style.borderRadius = '12px';
+            input.style.border = '3px solid var(--primary)';
+            input.style.marginBottom = '20px';
+            input.autocomplete = 'off';
+            elements.optionsContainer.appendChild(input);
+
+            const grid = document.createElement('div');
+            grid.style.display = 'grid';
+            grid.style.gridTemplateColumns = '1fr 1fr';
+            grid.style.gap = '10px';
+            
+            hintData.forEach((h, i) => {
+                const item = document.createElement('div');
+                item.style.border = '2px solid var(--primary)';
+                item.style.borderRadius = '8px';
+                item.style.padding = '10px';
+                item.style.background = 'white';
+                item.innerHTML = `<div style="font-size: 0.75rem; color: #64748b; text-transform: uppercase;">${h.hint}</div>
+                                  <div class="answer-cell" style="font-weight: 900; color: #e2e8f0;">???</div>`;
+                grid.appendChild(item);
+            });
+            elements.optionsContainer.appendChild(grid);
+
+            elements.nextBtn.style.display = 'block';
+            elements.nextBtn.textContent = "Give Up / Next";
+
+            let timeLeft = 60;
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                const display = document.getElementById('timer-sec');
+                if (display) display.textContent = timeLeft;
+                
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    input.disabled = true;
+                    input.placeholder = "Time's up!";
+                    elements.feedbackText.textContent = "Game Over!";
+                    
+                    // Reveal missed answers in Red
+                    hintData.forEach((h, i) => {
+                        const cell = grid.children[i].querySelector('.answer-cell');
+                        if (cell.textContent === '???') {
+                            cell.textContent = h.answer;
+                            cell.style.color = '#ef4444';
+                        }
+                    });
+                }
+            }, 1000);
+
+            input.addEventListener('input', () => {
+                const guess = input.value.trim().toLowerCase();
+                const matchIdx = validAnswers.indexOf(guess);
+                
+                if (matchIdx !== -1 && !correctlyTypedAnswers.includes(guess)) {
+                    correctlyTypedAnswers.push(guess);
+                    score++;
+                    
+                    const cell = grid.children[matchIdx].querySelector('.answer-cell');
+                    cell.textContent = originalAnswers[matchIdx];
+                    cell.style.color = '#22c55e';
+                    
+                    input.value = '';
+                    elements.feedbackText.textContent = `Correct! (${correctlyTypedAnswers.length}/${validAnswers.length})`;
+                    
+                    if (correctlyTypedAnswers.length === validAnswers.length) {
+                        clearInterval(timerInterval);
+                        input.disabled = true;
+                        elements.feedbackText.textContent = "Perfect!";
+                    }
+                }
+            });
+            setTimeout(() => input.focus(), 100);
+        }
+
+        // --- 8. NAVIGATION ---
+        function nextQuestion() {
+            if (timerInterval) clearInterval(timerInterval);
+            currentQuestionIndex++;
+            if (currentQuestionIndex < currentQuestions.length) renderCurrentQuestion();
+            else showResults();
+        }
+
+        function showResults() {
+            elements.quizScreen.classList.remove('active');
+            elements.resultsScreen.classList.add('active');
+            elements.scoreDisplay.textContent = `You scored: ${score}!`;
+        }
+
+        function returnHome() {
+            elements.resultsScreen.classList.remove('active');
+            elements.homeScreen.classList.add('active');
+            fetchQuizzes();
+        }
+
+        window.nextQuestion = nextQuestion;
+        window.returnHome = returnHome;
+        init();
     </script>
 </body>
 </html>
