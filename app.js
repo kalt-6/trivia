@@ -54,6 +54,16 @@ const State = {
  **************************************************************/
 window.App = {
     
+    // --- Utility: Randomize Quizzes ---
+    shuffleArray: (array) => {
+        const newArray = [...array];
+        for (let i = newArray.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+        }
+        return newArray;
+    },
+
     // --- Navigation ---
     goHome: () => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -91,8 +101,10 @@ window.App = {
             if (error) throw error;
             if (!data) throw new Error("No data returned from the database.");
 
-            // Append category data (Added fallback strings to prevent crashes on null fields)
-            State.quizzes = data.map(quiz => ({ ...quiz, category: App.categorizeQuiz(quiz) }));
+            // Append category data and randomize the order!
+            const mappedQuizzes = data.map(quiz => ({ ...quiz, category: App.categorizeQuiz(quiz) }));
+            State.quizzes = App.shuffleArray(mappedQuizzes);
+            
             App.renderHome();
 
         } catch (err) {
