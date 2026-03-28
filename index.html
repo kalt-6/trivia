@@ -261,112 +261,144 @@
             return html;
         }
 
-        // --- 7. RENDER QUESTION SCREEN (WITH SIDEBAR) ---
-        function renderQuizStep() {
-            const question = state.currentQuestions[state.currentIndex];
-            const optionsArray = typeof question.options === 'string' ? JSON.parse(question.options) : question.options;
-            const isTypeIn = optionsArray.length === 1 && optionsArray[0] === "TYPE";
+// --- 7. RENDER QUESTION SCREEN (WITH SIDEBAR & TIMER) ---
+function renderQuizStep() {
+    clearInterval(timerInterval); // Reset timer if running
+    const question = state.currentQuestions[state.currentIndex];
+    
+    const optionsArray = typeof question.options === 'string' ? JSON.parse(question.options) : question.options;
+    const isTypeIn = optionsArray.length === 1 && optionsArray[0] === "TYPE";
+    const isHintTypeIn = optionsArray.length > 1 && optionsArray[0] === "TYPE_HINT"; // New Jetpunk Mode
 
-            let quizHtml = `
-                <div class="bouncy-card p-6 md:p-10 fade-in text-center flex-grow">
-                    <div class="flex justify-center items-center mb-6">
-                        <span class="bg-background text-primary border-2 border-primary font-black px-4 py-2 rounded-full tracking-widest uppercase text-xs md:text-sm">
-                            ${state.currentQuizTitle} - Q${state.currentIndex + 1}/${state.currentQuestions.length}
-                        </span>
-                    </div>
-                    <h2 class="text-2xl md:text-4xl font-black mb-8 text-text-main leading-tight">${question.question_text}</h2>
-            `;
+    let quizHtml = `
+        <div class="bouncy-card p-6 md:p-10 fade-in text-center flex-grow">
+            <div class="flex justify-center items-center mb-6">
+                <span class="bg-background text-primary border-2 border-primary font-black px-4 py-2 rounded-full tracking-widest uppercase text-xs md:text-sm">
+                    ${state.currentQuizTitle} - Q${state.currentIndex + 1}/${state.currentQuestions.length}
+                </span>
+            </div>
+            <h2 class="text-2xl md:text-4xl font-black mb-8 text-text-main leading-tight">${question.question_text}</h2>
+    `;
 
-            if (isTypeIn) {
+    if (isTypeIn || isHintTypeIn) {
+        // Add Timer UI
+        quizHtml += `
+            <div class="flex justify-between items-center mb-4 px-4">
+                <div class="text-2xl font-black ${isHintTypeIn ? 'text-red-500' : 'hidden'}"><i class="fas fa-stopwatch mr-2"></i><span id="timer-display">60</span>s</div>
+                <div id="feedback" class="text-xl font-black uppercase tracking-wide"></div>
+            </div>
+            <input type="text" id="type-input" autofocus class="w-full bg-surface border-4 border-primary p-5 rounded-2xl mb-6 text-text-main text-2xl font-bold text-center focus:border-secondary focus:ring-0 outline-none transition-all shadow-inner" placeholder="Type answer here..." autocomplete="off">
+        `;
+
+        if (isHintTypeIn) {
+            // Build the JetPunk Style Hint Grid
+            const hintData = optionsArray.slice(1);
+            quizHtml += `<div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6">`;
+            hintData.forEach((h, i) => {
                 quizHtml += `
-                    <input type="text" id="type-input" autofocus class="w-full bg-surface border-4 border-primary p-5 rounded-2xl mb-6 text-text-main text-2xl font-bold text-center focus:border-secondary focus:ring-0 outline-none transition-all shadow-inner" placeholder="Type answer here..." autocomplete="off">
-                    <ul id="typed-answers-list" class="flex flex-wrap justify-center gap-3 mb-6 p-0 list-none"></ul>
-                    <div id="feedback" class="h-10 text-xl md:text-2xl font-black uppercase tracking-wide mb-6"></div>
-                    <button onclick="nextQuestion()" class="btn-3d w-full bg-text-light text-white py-4 rounded-xl font-black text-lg md:text-xl tracking-widest uppercase">I'm Done / Next</button>
+                <div class="flex border-2 border-primary rounded-xl overflow-hidden shadow-sm bg-surface">
+                    <div class="bg-background text-primary font-black p-3 w-1/3 border-r-2 border-primary flex items-center justify-center text-center text-sm">${h.hint}</div>
+                    <div id="ans-${i}" class="p-3 w-2/3 font-bold flex items-center justify-center text-center text-gray-300 transition-colors">???</div>
                 </div>`;
-            } else {
-                let optionsHtml = `<div class="grid grid-cols-1 sm:grid-cols-2 gap-4" id="btn-grid">`;
-                optionsArray.forEach((opt, i) => {
-                    optionsHtml += `
-                        <button onclick="submitMC('${question.id}', '${opt.replace(/'/g, "\\'")}', this)" class="opt-btn opt-${i % 4} btn-3d w-full p-6 rounded-2xl font-black text-lg md:text-2xl shadow-sm flex items-center justify-center text-center border-none">
-                            ${opt}
-                        </button>
-                    `;
-                });
-                optionsHtml += `</div>`;
-
-                quizHtml += `
-                    ${optionsHtml}
-                    <div id="feedback" class="mt-8 h-10 text-2xl md:text-3xl font-black uppercase tracking-wide"></div>
-                    <button id="next-btn" onclick="nextQuestion()" class="btn-3d w-full bg-primary text-white py-4 mt-6 rounded-xl font-black text-lg md:text-xl tracking-widest uppercase hidden">Next Question</button>
-                </div>`;
-            }
-
-            appRoot.innerHTML = `
-                <div class="flex flex-col lg:flex-row gap-8 max-w-7xl mx-auto items-start">
-                    <div class="w-full lg:w-2/3 xl:w-3/4">${quizHtml}</div>
-                    <div class="w-full lg:w-1/3 xl:w-1/4">${renderSidebar()}</div>
-                </div>
-            `;
-
-            if (isTypeIn) setupTypingLogic(question);
-        }
-
-        // --- 8. HANDLING MULTIPLE CHOICE ---
-        async function submitMC(questionId, selectedOption, btnElement) {
-            if (state.isProcessing) return;
-            state.isProcessing = true;
-            
-            const allBtns = document.querySelectorAll('.opt-btn');
-            allBtns.forEach(b => { b.disabled = true; b.style.opacity = '0.7'; });
-            btnElement.style.opacity = '1';
-
-            const feedback = document.getElementById('feedback');
-            feedback.innerHTML = `<span class="text-text-light"><i class="fas fa-spinner fa-spin mr-2"></i>Checking...</span>`;
-
-            const { data: isCorrect, error } = await supabaseClient.rpc('check_quiz_answer', { q_id: questionId, user_guess: selectedOption });
-
-            if (isCorrect) {
-                state.score++;
-                btnElement.style.backgroundColor = '#22c55e'; btnElement.style.boxShadow = '0 6px 0px #15803d';
-                feedback.innerHTML = `<span class="text-green-500"><i class="fas fa-check-circle mr-2"></i>Correct!</span>`;
-            } else {
-                btnElement.style.backgroundColor = '#ef4444'; btnElement.style.boxShadow = '0 6px 0px #b91c1c';
-                feedback.innerHTML = `<span class="text-red-500"><i class="fas fa-times-circle mr-2"></i>Incorrect!</span>`;
-            }
-
-            document.getElementById('next-btn').classList.remove('hidden');
-        }
-
-        // --- 9. HANDLING JETPUNK TYPING ---
-        function setupTypingLogic(question) {
-            correctlyTypedAnswers = []; 
-            const validAnswers = question.correct_answer.split(',').map(a => a.trim());
-            const input = document.getElementById('type-input');
-            const answersList = document.getElementById('typed-answers-list');
-            const feedback = document.getElementById('feedback');
-
-            setTimeout(() => input.focus(), 100);
-
-            input.addEventListener('input', function () {
-                const guess = input.value.trim().toLowerCase();
-                if (guess === '') return;
-                
-                const matchedAnswer = validAnswers.find(answer => answer.toLowerCase() === guess);
-
-                if (matchedAnswer && !correctlyTypedAnswers.includes(matchedAnswer)) {
-                    correctlyTypedAnswers.push(matchedAnswer);
-                    state.score++; 
-                    
-                    const li = document.createElement('li');
-                    li.innerHTML = `<span class="bg-green-500 text-white font-black px-4 py-2 rounded-full md:text-lg shadow-md block fade-in"><i class="fas fa-check mr-2"></i>${matchedAnswer}</span>`;
-                    answersList.appendChild(li);
-                    
-                    feedback.innerHTML = `<span class="text-green-500">Found: ${correctlyTypedAnswers.length} / ${validAnswers.length}</span>`;
-                    input.value = ''; 
-                }
             });
+            quizHtml += `</div>`;
+        } else {
+            quizHtml += `<ul id="typed-answers-list" class="flex flex-wrap justify-center gap-3 mb-6 p-0 list-none"></ul>`;
         }
+        
+        quizHtml += `<button onclick="nextQuestion()" class="btn-3d w-full bg-text-light text-white py-4 rounded-xl font-black text-lg md:text-xl tracking-widest uppercase">I'm Done / Next</button></div>`;
+    } else {
+        // ... (Keep your existing Multiple Choice HTML generation here) ...
+        let optionsHtml = `<div class="grid grid-cols-1 sm:grid-cols-2 gap-4" id="btn-grid">`;
+        optionsArray.forEach((opt, i) => {
+            optionsHtml += `<button onclick="submitMC('${question.id}', '${opt.replace(/'/g, "\\'")}', this)" class="opt-btn opt-${i % 4} btn-3d w-full p-6 rounded-2xl font-black text-lg md:text-2xl shadow-sm flex items-center justify-center text-center border-none">${opt}</button>`;
+        });
+        optionsHtml += `</div>`;
+        quizHtml += `${optionsHtml}<div id="feedback" class="mt-8 h-10 text-2xl md:text-3xl font-black uppercase tracking-wide"></div><button id="next-btn" onclick="nextQuestion()" class="btn-3d w-full bg-primary text-white py-4 mt-6 rounded-xl font-black text-lg md:text-xl tracking-widest uppercase hidden">Next Question</button></div>`;
+    }
+
+    appRoot.innerHTML = `<div class="flex flex-col lg:flex-row gap-8 max-w-7xl mx-auto items-start"><div class="w-full lg:w-2/3 xl:w-3/4">${quizHtml}</div><div class="w-full lg:w-1/3 xl:w-1/4">${renderSidebar()}</div></div>`;
+    
+    if (isTypeIn || isHintTypeIn) setupTypingLogic(question, isHintTypeIn, isHintTypeIn ? optionsArray.slice(1) : []);
+}
+
+// --- 9. HANDLING JETPUNK TYPING & TIMERS ---
+function setupTypingLogic(question, isHintTypeIn, hintData) {
+    correctlyTypedAnswers = []; 
+    const originalAnswers = question.correct_answer.split(',').map(a => a.trim());
+    const validAnswers = originalAnswers.map(a => a.toLowerCase()); // For checking
+    
+    const input = document.getElementById('type-input');
+    const feedback = document.getElementById('feedback');
+    const timerDisplay = document.getElementById('timer-display');
+
+    // Run the 60 Second Timer
+    if (isHintTypeIn) {
+        let timeLeft = 60;
+        timerInterval = setInterval(() => {
+            timeLeft--;
+            timerDisplay.textContent = timeLeft;
+            if (timeLeft <= 0) {
+                clearInterval(timerInterval);
+                input.disabled = true;
+                input.placeholder = "Time's up!";
+                feedback.innerHTML = `<span class="text-red-500">Time's Up!</span>`;
+                
+                // Reveal the answers they missed in red!
+                hintData.forEach((h, i) => {
+                    const cell = document.getElementById(`ans-${i}`);
+                    if (cell.textContent === '???') {
+                        cell.textContent = h.answer;
+                        cell.classList.remove('text-gray-300');
+                        cell.classList.add('text-red-400', 'bg-red-50');
+                    }
+                });
+            }
+        }, 1000);
+    }
+
+    setTimeout(() => input.focus(), 100);
+
+    input.addEventListener('input', function () {
+        const guess = input.value.trim().toLowerCase();
+        if (guess === '') return;
+        
+        const matchIndex = validAnswers.findIndex(answer => answer === guess);
+
+        if (matchIndex !== -1 && !correctlyTypedAnswers.includes(validAnswers[matchIndex])) {
+            const matchedAnswer = originalAnswers[matchIndex];
+            correctlyTypedAnswers.push(validAnswers[matchIndex]);
+            state.score++; 
+            
+            if (isHintTypeIn) {
+                // Update the grid cell!
+                const cell = document.getElementById(`ans-${matchIndex}`);
+                if (cell) {
+                    cell.textContent = matchedAnswer;
+                    cell.classList.remove('text-gray-300');
+                    cell.classList.add('text-white', 'bg-green-500');
+                }
+            } else {
+                // Standard visual list
+                const answersList = document.getElementById('typed-answers-list');
+                const li = document.createElement('li');
+                li.innerHTML = `<span class="bg-green-500 text-white font-black px-4 py-2 rounded-full md:text-lg shadow-md block fade-in"><i class="fas fa-check mr-2"></i>${matchedAnswer}</span>`;
+                answersList.appendChild(li);
+            }
+            
+            feedback.innerHTML = `<span class="text-green-500">Found: ${correctlyTypedAnswers.length} / ${validAnswers.length}</span>`;
+            input.value = ''; 
+
+            // Did they win early?
+            if (correctlyTypedAnswers.length === validAnswers.length) {
+                clearInterval(timerInterval);
+                input.disabled = true;
+                input.placeholder = "Perfect Score!";
+                feedback.innerHTML = `<span class="text-green-500">You got them all!</span>`;
+            }
+        }
+    });
+}
 
         // --- 10. NAVIGATION & RESULTS ---
         function nextQuestion() {
