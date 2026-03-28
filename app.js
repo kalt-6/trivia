@@ -87,9 +87,9 @@ window.App = {
 
     categorizeQuiz: (quiz) => {
         const text = ((quiz.title || "") + " " + (quiz.description || "")).toLowerCase();
-        if (text.includes('countr') || text.includes('capit') || text.includes('geography') || text.includes('state') || text.includes('ocean')) return 'Geography';
+        if (text.includes('countr') || text.includes('capit') || text.includes('geography') || text.includes('state') || text.includes('ocean') || text.includes('cit')) return 'Geography';
         if (text.includes('scienc') || text.includes('planet') || text.includes('element')) return 'Science';
-        if (text.includes('pop') || text.includes('movie') || text.includes('harry potter') || text.includes('disney')) return 'Pop Culture';
+        if (text.includes('pop') || text.includes('movie') || text.includes('harry potter') || text.includes('disney') || text.includes('zodiac')) return 'Pop Culture';
         if (text.includes('histor') || text.includes('president')) return 'History & Arts';
         if (text.includes('sport') || text.includes('nfl')) return 'Sports & Food';
         return 'General';
@@ -106,19 +106,47 @@ window.App = {
         
         let filterHtml = `<div class="flex overflow-x-auto gap-3 pb-4 mb-8 justify-start no-scrollbar fade-in px-4 w-full">`;
         State.categories.forEach(cat => {
-            const active = State.activeFilter === cat ? "bg-primary text-white border-primary shadow-lg transform scale-105" : "bg-surface text-text-light border-gray-200";
+            const active = State.activeFilter === cat ? "bg-primary text-white border-primary shadow-lg transform scale-105" : "bg-surface text-text-light border-gray-200 hover:border-primary hover:text-primary";
             filterHtml += `<button onclick="App.setFilter('${cat}')" class="px-6 py-2 rounded-full font-black text-sm uppercase tracking-widest whitespace-nowrap transition-all cursor-pointer border-2 ${active}">${cat}</button>`;
         });
         filterHtml += `</div>`;
 
         let html = `<div class="text-center mb-8 fade-in"><h1 class="text-5xl md:text-6xl font-black text-primary mb-4 uppercase tracking-wider text-shadow">Select a Quiz!</h1></div>${filterHtml}<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 fade-in">`;
 
+        // Restored and updated dynamic icons!
+        const getQuizIconData = (quiz) => {
+            const title = (quiz.title || "").toLowerCase();
+            if (title.includes('state') || title.includes('cit')) return { icon: 'fa-map', color: 'text-blue-500', bg: 'bg-blue-100' };
+            if (title.includes('ocean') || title.includes('continent') || title.includes('geography')) return { icon: 'fa-globe-americas', color: 'text-green-500', bg: 'bg-green-100' };
+            if (title.includes('countr') || title.includes('europ') || title.includes('capit')) return { icon: 'fa-landmark', color: 'text-purple-500', bg: 'bg-purple-100' };
+            if (title.includes('element') || title.includes('scienc')) return { icon: 'fa-flask', color: 'text-teal-500', bg: 'bg-teal-100' };
+            if (title.includes('planet') || title.includes('solar')) return { icon: 'fa-meteor', color: 'text-orange-500', bg: 'bg-orange-100' };
+            if (title.includes('harry potter') || title.includes('disney')) return { icon: 'fa-magic', color: 'text-pink-500', bg: 'bg-pink-100' };
+            if (title.includes('nfl') || title.includes('sport')) return { icon: 'fa-football-ball', color: 'text-orange-500', bg: 'bg-orange-100' };
+            if (title.includes('president')) return { icon: 'fa-flag-usa', color: 'text-red-500', bg: 'bg-red-100' };
+            if (title.includes('month') || title.includes('zodiac')) return { icon: 'fa-calendar-alt', color: 'text-indigo-500', bg: 'bg-indigo-100' };
+            
+            if (quiz.category === 'Geography') return { icon: 'fa-map-marked-alt', color: 'text-blue-500', bg: 'bg-blue-100' };
+            if (quiz.category === 'Science') return { icon: 'fa-microscope', color: 'text-teal-500', bg: 'bg-teal-100' };
+            if (quiz.category === 'Pop Culture') return { icon: 'fa-gamepad', color: 'text-pink-500', bg: 'bg-pink-100' };
+            if (quiz.category === 'History & Arts') return { icon: 'fa-palette', color: 'text-purple-500', bg: 'bg-purple-100' };
+            if (quiz.category === 'Sports & Food') return { icon: 'fa-football-ball', color: 'text-orange-500', bg: 'bg-orange-100' };
+            return { icon: 'fa-star', color: 'text-yellow-500', bg: 'bg-yellow-100' };
+        };
+
         displayedQuizzes.forEach((quiz) => {
             const safeTitle = (quiz.title || "Untitled").replace(/'/g, "\\'");
+            const iconData = getQuizIconData(quiz);
+            
             html += `
             <button onclick="App.startQuiz('${quiz.id}', '${safeTitle}')" class="flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-3 p-4 bg-surface border border-gray-200 hover:border-primary hover:shadow-lg transition-all group rounded-xl cursor-pointer">
-                <div class="p-3 rounded-lg flex items-center justify-center bg-blue-100 text-blue-500 group-hover:scale-110 transition-transform"><i class="fas fa-play text-xl"></i></div>
-                <div class="flex flex-col justify-center sm:pt-1"><span class="font-bold text-sm text-text-main leading-tight">${quiz.title}</span></div>
+                <div class="p-3 rounded-lg flex items-center justify-center ${iconData.bg} ${iconData.color} group-hover:scale-110 transition-transform">
+                    <i class="fas ${iconData.icon} text-xl"></i>
+                </div>
+                <div class="flex flex-col justify-center sm:pt-1">
+                    <span class="font-bold text-sm text-text-main leading-tight">${quiz.title}</span>
+                    <span class="text-[10px] text-text-light mt-1 font-black uppercase tracking-wider hidden sm:block">Play Now <i class="fas fa-play text-[8px] ml-1"></i></span>
+                </div>
             </button>`;
         });
         
@@ -270,7 +298,6 @@ window.App = {
             });
         }
 
-        // Change the finish button into a "See Results" button
         finishBtn.innerHTML = "See Final Results <i class='fas fa-arrow-right ml-2'></i>";
         finishBtn.classList.replace('bg-text-light', 'bg-primary');
         finishBtn.onclick = App.renderResults;
