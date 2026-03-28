@@ -2,11 +2,14 @@
  * 1. DATABASE SETUP
  **************************************************************/
 const DB = {
-    url: '[https://pjjfnnzvwrhzvycjgkmz.supabase.co](https://pjjfnnzvwrhzvycjgkmz.supabase.co)',
+    url: 'https://pjjfnnzvwrhzvycjgkmz.supabase.co',
     key: 'sb_publishable_J53ea-bCU35D1VSTK0l49A_b_BYW98W',
     client: null,
     
     init() {
+        if (!window.supabase) {
+            throw new Error("Supabase failed to load. Check your internet connection or ad-blocker.");
+        }
         this.client = window.supabase.createClient(this.url, this.key);
     },
     async fetchQuizzes() {
@@ -30,7 +33,7 @@ const State = {
         id: null,
         title: "",
         questions: [],
-        relatedQuizzes: [], // Cached to avoid recalculating every question
+        relatedQuizzes: [], 
         currentIndex: 0,
         score: 0,
         isProcessing: false,
@@ -58,34 +61,41 @@ window.App = {
         State.activeFilter = 'All'; 
         
         const root = document.getElementById('app-root');
+        if (!root) return; // Failsafe
+        
         root.innerHTML = `
             <div class="flex flex-col items-center justify-center mt-32 fade-in">
                 <i class="fas fa-circle-notch fa-spin text-6xl text-primary mb-6"></i>
                 <h2 class="text-3xl font-extrabold text-primary tracking-wide uppercase">Opening Vault...</h2>
             </div>`;
 
-        if (!DB.client) DB.init();
-        const { data, error } = await DB.fetchQuizzes();
+        try {
+            if (!DB.client) DB.init();
+            const { data, error } = await DB.fetchQuizzes();
 
-        if (error) {
+            if (error) throw error;
+            if (!data) throw new Error("No data returned from the database.");
+
+            // Append category data (Added fallback strings to prevent crashes on null fields)
+            State.quizzes = data.map(quiz => ({ ...quiz, category: App.categorizeQuiz(quiz) }));
+            App.renderHome();
+
+        } catch (err) {
+            console.error("Initialization Error:", err);
             root.innerHTML = `
                 <div class="text-center text-red-500 mt-20 bouncy-card p-10 max-w-md mx-auto fade-in">
                     <i class="fas fa-exclamation-triangle text-5xl mb-4"></i>
-                    <h2 class="text-3xl font-black uppercase">Database Error</h2>
-                    <p class="mt-4 font-bold text-text-light">We couldn't connect to the vault.</p>
+                    <h2 class="text-3xl font-black uppercase">Connection Error</h2>
+                    <p class="mt-4 font-bold text-text-light">${err.message || 'We couldn\'t connect to the vault.'}</p>
                     <button onclick="App.init()" class="mt-6 btn-3d bg-primary text-white py-3 px-6 rounded-xl font-bold uppercase">Retry</button>
                 </div>`;
-            return;
         }
-
-        // Append category data
-        State.quizzes = data.map(quiz => ({ ...quiz, category: App.categorizeQuiz(quiz) }));
-        App.renderHome();
     },
 
     // --- Categorization Algorithm ---
     categorizeQuiz: (quiz) => {
-        const text = (quiz.title + " " + quiz.description).toLowerCase();
+        // NULL CHECK: Safely combines text even if title/description are missing in the DB
+        const text = ((quiz.title || "") + " " + (quiz.description || "")).toLowerCase();
         
         if (text.includes('countr') || text.includes('capit') || text.includes('geography')) return 'Geography';
         if (text.includes('scienc') || text.includes('biolog') || text.includes('space')) return 'Science';
@@ -134,7 +144,7 @@ window.App = {
 
         displayedQuizzes.forEach((quiz, index) => {
             const icon = icons[index % icons.length];
-            const safeTitle = quiz.title.replace(/'/g, "\\'");
+            const safeTitle = (quiz.title || "Untitled").replace(/'/g, "\\'");
             html += `
                 <div class="bouncy-card overflow-hidden hover:border-secondary transition-all duration-300 transform hover:-translate-y-2 cursor-pointer flex flex-col h-full bg-surface group" onclick="App.startQuiz('${quiz.id}', '${safeTitle}')">
                     <div class="p-6 flex-grow text-center relative">
@@ -142,8 +152,8 @@ window.App = {
                         <div class="w-16 h-16 bg-background rounded-full flex items-center justify-center mx-auto mb-4 mt-6 border-2 border-primary group-hover:bg-primary transition-colors duration-300">
                             <i class="fas ${icon} text-primary text-3xl group-hover:text-white"></i>
                         </div>
-                        <h3 class="text-2xl font-extrabold text-text-main mb-2 uppercase tracking-wide">${quiz.title}</h3>
-                        <p class="text-text-light font-bold text-sm">${quiz.description}</p>
+                        <h3 class="text-2xl font-extrabold text-text-main mb-2 uppercase tracking-wide">${quiz.title || "Untitled Quiz"}</h3>
+                        <p class="text-text-light font-bold text-sm">${quiz.description || ""}</p>
                     </div>
                     <div class="bg-primary group-hover:bg-secondary transition-colors duration-300 p-4 text-center mt-auto">
                          <span class="text-white font-black text-lg uppercase tracking-widest">Play Now <i class="fas fa-play ml-2"></i></span>
@@ -162,34 +172,39 @@ window.App = {
         const root = document.getElementById('app-root');
         root.innerHTML = `<div class="text-center mt-32 text-primary fade-in"><i class="fas fa-spinner fa-spin text-6xl mb-6"></i><h2 class="text-3xl font-black uppercase">Loading...</h2></div>`;
         
-        const { data, error } = await DB.fetchQuestions(quizId);
+        try {
+            const { data, error } = await DB.fetchQuestions(quizId);
 
-        if (error || !data || data.length === 0) {
-            root.innerHTML = `
-                <div class="text-center text-red-500 mt-20 bouncy-card p-10 max-w-md mx-auto fade-in">
-                    <h2 class="text-3xl font-black uppercase">Oops!</h2>
-                    <p class="mt-4 font-bold text-text-light">This quiz has no questions available.</p>
-                    <button onclick="App.init()" class="mt-6 btn-3d bg-primary text-white py-3 px-6 rounded-xl font-bold uppercase">Back to Vault</button>
-                </div>`;
-            return;
+            if (error) throw error;
+            if (!data || data.length === 0) {
+                root.innerHTML = `
+                    <div class="text-center text-red-500 mt-20 bouncy-card p-10 max-w-md mx-auto fade-in">
+                        <h2 class="text-3xl font-black uppercase">Oops!</h2>
+                        <p class="mt-4 font-bold text-text-light">This quiz has no questions available.</p>
+                        <button onclick="App.init()" class="mt-6 btn-3d bg-primary text-white py-3 px-6 rounded-xl font-bold uppercase">Back to Vault</button>
+                    </div>`;
+                return;
+            }
+
+            State.quiz = {
+                id: quizId,
+                title: title,
+                questions: data,
+                currentIndex: 0,
+                score: 0,
+                isProcessing: false,
+                typedAnswers: [],
+                timerInterval: null,
+                relatedQuizzes: App.calculateRelatedQuizzes(quizId) 
+            };
+
+            App.renderQuizStep();
+        } catch (err) {
+            console.error("Error loading questions:", err);
+            root.innerHTML = `<div class="text-center text-red-500 font-bold mt-20">Failed to load questions. Please try again.</div>`;
         }
-
-        State.quiz = {
-            id: quizId,
-            title: title,
-            questions: data,
-            currentIndex: 0,
-            score: 0,
-            isProcessing: false,
-            typedAnswers: [],
-            timerInterval: null,
-            relatedQuizzes: App.calculateRelatedQuizzes(quizId) // Cached for performance
-        };
-
-        App.renderQuizStep();
     },
 
-    // Optimization: Calculate related quizzes just once when the quiz starts
     calculateRelatedQuizzes: (currentQuizId) => {
         const currentQuiz = State.quizzes.find(q => q.id === currentQuizId);
         if (!currentQuiz) return [];
@@ -226,12 +241,12 @@ window.App = {
                 <div class="space-y-4">
         `;
         related.forEach(q => {
-            const safeTitle = q.title.replace(/'/g, "\\'");
+            const safeTitle = (q.title || "Untitled").replace(/'/g, "\\'");
             html += `
                 <div onclick="App.startQuiz('${q.id}', '${safeTitle}')" class="group cursor-pointer bg-background rounded-xl p-4 border-2 border-transparent hover:border-secondary transition-all">
                     <span class="text-[10px] font-black uppercase text-primary mb-1 block">${q.category}</span>
-                    <h4 class="font-bold text-text-main group-hover:text-secondary transition-colors leading-tight mb-1">${q.title}</h4>
-                    <p class="text-xs text-text-light line-clamp-2">${q.description}</p>
+                    <h4 class="font-bold text-text-main group-hover:text-secondary transition-colors leading-tight mb-1">${q.title || "Untitled"}</h4>
+                    <p class="text-xs text-text-light line-clamp-2">${q.description || ""}</p>
                 </div>
             `;
         });
@@ -243,7 +258,16 @@ window.App = {
         State.quiz.isProcessing = false;
 
         const question = State.quiz.questions[State.quiz.currentIndex];
-        const optionsArray = typeof question.options === 'string' ? JSON.parse(question.options) : question.options;
+        
+        // Safety parsing options
+        let optionsArray = [];
+        try {
+            optionsArray = typeof question.options === 'string' ? JSON.parse(question.options) : question.options;
+        } catch(e) {
+            console.error("Failed to parse options for question", question.id);
+            optionsArray = [];
+        }
+
         const isTypeIn = optionsArray.length === 1 && optionsArray[0] === "TYPE";
         const isHintTypeIn = optionsArray.length > 1 && optionsArray[0] === "TYPE_HINT"; 
 
@@ -255,7 +279,7 @@ window.App = {
                             ${State.quiz.title} - Q${State.quiz.currentIndex + 1}/${State.quiz.questions.length}
                         </span>
                     </div>
-                    <h2 class="text-2xl md:text-4xl font-black mb-8 text-text-main leading-tight">${question.question_text}</h2>
+                    <h2 class="text-2xl md:text-4xl font-black mb-8 text-text-main leading-tight">${question.question_text || "No Question Text"}</h2>
         `;
 
         if (isTypeIn || isHintTypeIn) {
@@ -274,7 +298,7 @@ window.App = {
                 hintData.forEach((h, i) => {
                     quizHtml += `
                     <div class="flex border-2 border-primary rounded-xl overflow-hidden shadow-sm bg-surface transition-colors duration-300">
-                        <div class="bg-background text-primary font-black p-3 w-1/3 border-r-2 border-primary flex items-center justify-center text-center text-sm md:text-base">${h.hint}</div>
+                        <div class="bg-background text-primary font-black p-3 w-1/3 border-r-2 border-primary flex items-center justify-center text-center text-sm md:text-base">${h.hint || "?"}</div>
                         <div id="ans-${i}" class="p-3 w-2/3 font-bold flex items-center justify-center text-center text-gray-300 transition-colors duration-300">???</div>
                     </div>`;
                 });
@@ -286,10 +310,10 @@ window.App = {
         
         } else {
             // --- Standard Multiple Choice ---
-            const safeCorrect = question.correct_answer.replace(/'/g, "\\'");
+            const safeCorrect = (question.correct_answer || "").replace(/'/g, "\\'");
             let optionsHtml = `<div class="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full" id="btn-grid">`;
             optionsArray.forEach((opt, i) => {
-                const safeOpt = opt.replace(/'/g, "\\'");
+                const safeOpt = (opt || "").replace(/'/g, "\\'");
                 optionsHtml += `<button onclick="App.submitMC('${safeCorrect}', '${safeOpt}', this)" class="opt-btn opt-${i % 4} btn-3d w-full p-6 rounded-2xl font-black text-lg md:text-2xl shadow-sm border-none transition-all">${opt}</button>`;
             });
             optionsHtml += `</div>`;
@@ -344,7 +368,7 @@ window.App = {
 
     setupTypingLogic: (question, isHintTypeIn, hintData) => {
         State.quiz.typedAnswers = []; 
-        const originalAnswers = question.correct_answer.split(',').map(a => a.trim());
+        const originalAnswers = (question.correct_answer || "").split(',').map(a => a.trim());
         const validAnswers = originalAnswers.map(a => a.toLowerCase()); 
         
         const input = document.getElementById('type-input');
@@ -365,7 +389,7 @@ window.App = {
                     
                     hintData.forEach((h, i) => {
                         const cell = document.getElementById(`ans-${i}`);
-                        if (cell.textContent === '???') {
+                        if (cell && cell.textContent === '???') {
                             cell.textContent = h.answer;
                             cell.classList.remove('text-gray-300');
                             cell.classList.add('text-white', 'bg-red-400');
@@ -419,9 +443,11 @@ window.App = {
     nextQuestion: () => {
         if (!State.quiz.isProcessing && State.quiz.typedAnswers.length > 0) {
              const question = State.quiz.questions[State.quiz.currentIndex];
-             const optionsArray = typeof question.options === 'string' ? JSON.parse(question.options) : question.options;
-             if (optionsArray[0] === "TYPE" || optionsArray[0] === "TYPE_HINT") {
-                 const validAnswers = question.correct_answer.split(',').length;
+             let optionsArray = [];
+             try { optionsArray = JSON.parse(question.options); } catch(e) { optionsArray = question.options; }
+
+             if (optionsArray && (optionsArray[0] === "TYPE" || optionsArray[0] === "TYPE_HINT")) {
+                 const validAnswers = (question.correct_answer || "").split(',').length;
                  if (State.quiz.typedAnswers.length !== validAnswers) {
                       State.quiz.score += State.quiz.typedAnswers.length;
                  }
@@ -441,9 +467,11 @@ window.App = {
         
         let totalPossible = 0;
         State.quiz.questions.forEach(q => {
-            const opts = typeof q.options === 'string' ? JSON.parse(q.options) : q.options;
-            if (opts.length > 0 && (opts[0] === "TYPE" || opts[0] === "TYPE_HINT")) {
-                totalPossible += q.correct_answer.split(',').length;
+            let opts = [];
+            try { opts = JSON.parse(q.options); } catch(e) { opts = q.options; }
+
+            if (opts && opts.length > 0 && (opts[0] === "TYPE" || opts[0] === "TYPE_HINT")) {
+                totalPossible += (q.correct_answer || "").split(',').length;
             } else {
                 totalPossible += 1;
             }
@@ -481,5 +509,9 @@ window.App = {
     }
 };
 
-// --- Execute Application on Load ---
-document.addEventListener('DOMContentLoaded', App.init);
+// --- Execute Application on Load (Failsafe Execution) ---
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', App.init);
+} else {
+    App.init(); 
+}
