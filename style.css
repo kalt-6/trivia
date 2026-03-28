@@ -1,161 +1,75 @@
 /* --- PLAYFUL & BRIGHT THEME --- */
 :root {
-    --primary: #8b5cf6; /* Vibrant Purple */
+    --primary: #8b5cf6; 
     --primary-hover: #7c3aed;
-    --secondary: #ec4899; /* Bright Pink */
-    --accent: #f59e0b; /* Sunny Yellow */
-    --background: #fdf4ff; /* Very light pink/purple tint */
+    --secondary: #ec4899;
+    --accent: #f59e0b;
+    --background: #fdf4ff;
     --surface: #ffffff;
     --text-main: #1e293b;
     --text-light: #64748b;
-    
-    /* Option Button Colors */
-    --opt-1: #ef4444; /* Red */
-    --opt-2: #3b82f6; /* Blue */
-    --opt-3: #eab308; /* Yellow */
-    --opt-4: #22c55e; /* Green */
+    --opt-1: #ef4444; --opt-2: #3b82f6; --opt-3: #eab308; --opt-4: #22c55e;
 }
 
 body {
-    font-family: 'Nunito', 'Segoe UI', sans-serif; /* A rounder, friendlier font */
+    font-family: 'Nunito', sans-serif;
     background-color: var(--background);
     background-image: radial-gradient(var(--accent) 1px, transparent 1px);
-    background-size: 20px 20px; /* Fun dotted background */
-    color: var(--text-main);
+    background-size: 20px 20px;
+    margin: 0;
     display: flex;
     justify-content: center;
     align-items: center;
     min-height: 100vh;
-    padding: 1rem;
-    margin: 0;
 }
 
 .container {
     background: var(--surface);
-    width: 100%;
-    max-width: 500px;
-    padding: 2.5rem;
-    border-radius: 24px; /* Extra round */
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+    width: 90%;
+    max-width: 600px;
+    padding: 2rem;
+    border-radius: 24px;
+    box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
     text-align: center;
     border: 4px solid var(--primary);
 }
 
-h1 {
-    color: var(--primary);
-    font-size: 2.5rem;
-    margin-top: 0;
-    text-transform: uppercase;
-    letter-spacing: 2px;
-    text-shadow: 2px 2px 0px rgba(139, 92, 246, 0.2);
-}
+.screen { display: none; }
+.screen.active { display: block; animation: popIn 0.3s ease; }
 
-h2 {
-    color: var(--text-main);
-    font-size: 1.5rem;
-    margin-bottom: 1.5rem;
-}
+@keyframes popIn { 0% { transform: scale(0.9); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
 
-/* Screen toggling magic */
-.screen { display: none; animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-.screen.active { display: block; }
-
-@keyframes popIn {
-    0% { transform: scale(0.9); opacity: 0; }
-    100% { transform: scale(1); opacity: 1; }
-}
-
-/* General Buttons */
 button {
     background-color: var(--primary);
     color: white;
     border: none;
-    padding: 15px 20px;
+    padding: 15px;
     margin: 8px 0;
     border-radius: 12px;
-    font-size: 1.1rem;
     font-weight: bold;
     cursor: pointer;
-    transition: all 0.2s ease;
     width: 100%;
-    box-shadow: 0 4px 0px var(--primary-hover); /* 3D Button effect */
+    box-shadow: 0 4px 0px var(--primary-hover);
+    transition: all 0.1s;
 }
 
-button:hover {
-    transform: translateY(2px);
-    box-shadow: 0 2px 0px var(--primary-hover); /* Pressed effect */
+button:active { transform: translateY(4px); box-shadow: none; }
+
+/* JetPunk Grid Styles */
+.answer-cell {
+    font-size: 1.1rem;
+    transition: all 0.3s ease;
 }
 
-button:active {
-    transform: translateY(4px);
-    box-shadow: none;
+input {
+    border: 3px solid var(--primary) !important;
+    text-align: center;
+    font-weight: bold;
 }
 
-/* Quiz List Buttons */
-#quizzes-container li button {
-    background-color: white;
-    color: var(--primary);
-    border: 2px solid var(--primary);
-    box-shadow: 0 4px 0px var(--primary);
-}
-#quizzes-container li button:hover {
-    background-color: var(--background);
-}
+/* Feedback Colors */
+.correct { color: #22c55e; font-weight: bold; }
+.incorrect { color: #ef4444; font-weight: bold; }
 
-/* Back / Next Buttons */
-#back-btn, #next-btn {
-    background-color: var(--text-light);
-    box-shadow: 0 4px 0px #475569;
-    width: auto;
-    font-size: 0.9rem;
-    padding: 10px 15px;
-}
-
-/* Gameplay Options Grid */
-#options-container {
-    display: grid;
-    grid-template-columns: 1fr 1fr; /* 2x2 Grid for options */
-    gap: 15px;
-    margin-top: 25px;
-}
-
-/* Colorize the 4 options */
-#options-container button:nth-child(1) { background-color: var(--opt-1); box-shadow: 0 4px 0px #b91c1c; }
-#options-container button:nth-child(2) { background-color: var(--opt-2); box-shadow: 0 4px 0px #1d4ed8; }
-#options-container button:nth-child(3) { background-color: var(--opt-3); box-shadow: 0 4px 0px #a16207; }
-#options-container button:nth-child(4) { background-color: var(--opt-4); box-shadow: 0 4px 0px #15803d; }
-
-#options-container button:disabled {
-    opacity: 0.7;
-    cursor: not-allowed;
-    transform: translateY(4px);
-    box-shadow: none;
-}
-
-ul { list-style-type: none; padding: 0; }
-
-/* Feedback text */
-#feedback-text {
-    font-weight: 800;
-    font-size: 1.5rem;
-    min-height: 2.5rem;
-    margin-top: 1.5rem;
-    text-transform: uppercase;
-}
-.correct { color: var(--opt-4); animation: bounce 0.5s; }
-.incorrect { color: var(--opt-1); animation: shake 0.5s; }
-
-@keyframes bounce {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-10px); }
-}
-@keyframes shake {
-    0%, 100% { transform: translateX(0); }
-    25% { transform: translateX(-5px); }
-    75% { transform: translateX(5px); }
-}
-
-/* Mobile Responsiveness */
-@media (max-width: 480px) {
-    #options-container { grid-template-columns: 1fr; } /* Stack on small screens */
-}
+ul { list-style: none; padding: 0; display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+li { background: #22c55e; color: white; padding: 5px 15px; border-radius: 20px; font-weight: bold; }
