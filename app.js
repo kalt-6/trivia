@@ -244,13 +244,15 @@ window.App = {
         try { options = typeof row.options === 'string' ? JSON.parse(row.options) : row.options; } 
         catch(e) { console.error("Failed to parse options"); }
 
-        // Remove the "TYPE_HINT" tag from the array to just get the hint objects
-        let hintData = options[0] === "TYPE_HINT" || options[0] === "TYPE" ? options.slice(1) : options;
+        // Safely clone the array so we don't mutate the original database pull
+        let hintData = options[0] === "TYPE_HINT" || options[0] === "TYPE" ? [...options.slice(1)] : [...options];
         
-        // Randomize the order of the hints using a true Fisher-Yates shuffle
+        // True Fisher-Yates Shuffle
         for (let i = hintData.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
-            [hintData[i], hintData[j]] = [hintData[j], hintData[i]];
+            const temp = hintData[i];
+            hintData[i] = hintData[j];
+            hintData[j] = temp;
         }
         
         // Save the shuffled array to state so finishQuiz uses the exact same order
