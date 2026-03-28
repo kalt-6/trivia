@@ -267,12 +267,11 @@ window.App = {
                 <input type="text" id="type-input" class="w-full bg-surface border-4 border-primary p-5 rounded-2xl text-text-main text-2xl font-bold text-center focus:border-secondary focus:ring-0 outline-none transition-all shadow-inner" placeholder="Type answer here..." autocomplete="off">
             </div>
             
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6 max-h-[50vh] overflow-y-auto p-2 border-2 border-background rounded-xl bg-background/30 shadow-inner">
-        `;
+            <div class="columns-1 sm:columns-2 gap-3 mb-6 max-h-[45vh] overflow-y-auto p-2 border-2 border-background rounded-xl bg-background/30 shadow-inner block">`;
 
         hintData.forEach((h, i) => {
             quizHtml += `
-            <div class="flex border-2 border-primary rounded-xl overflow-hidden shadow-sm bg-surface transition-colors duration-300">
+            <div class="flex border-2 border-primary rounded-xl overflow-hidden shadow-sm bg-surface transition-colors duration-300 break-inside-avoid mb-3">
                 <div class="bg-background text-primary font-bold p-3 w-1/2 border-r-2 border-primary flex items-center justify-start text-left text-sm md:text-base">${h.hint || "?"}</div>
                 <div id="ans-${i}" class="p-3 w-1/2 font-black flex items-center justify-center text-center text-gray-300 transition-colors duration-300">???</div>
             </div>`;
