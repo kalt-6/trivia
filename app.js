@@ -2,7 +2,7 @@
  * 1. DATABASE SETUP
  **************************************************************/
 const DB = {
-    url: 'https://pjjfnnzvwrhzvycjgkmz.supabase.co',
+    url: '[https://pjjfnnzvwrhzvycjgkmz.supabase.co](https://pjjfnnzvwrhzvycjgkmz.supabase.co)',
     key: 'sb_publishable_J53ea-bCU35D1VSTK0l49A_b_BYW98W',
     client: null,
     
@@ -22,7 +22,7 @@ const DB = {
  **************************************************************/
 const State = {
     quizzes: [],
-    categories: ['All', 'Typing Challenges', 'Geography', 'Science', 'Pop Culture', 'History & Arts', 'Sports & Food', 'General'],
+    categories: ['All', 'Geography', 'Science', 'Pop Culture', 'History & Arts', 'Sports & Food', 'General'],
     activeFilter: 'All',
     
     // Current Session Data
@@ -86,7 +86,7 @@ window.App = {
     // --- Categorization Algorithm ---
     categorizeQuiz: (quiz) => {
         const text = (quiz.title + " " + quiz.description).toLowerCase();
-        if (text.includes('type')) return 'Typing Challenges';
+        
         if (text.includes('countr') || text.includes('capit') || text.includes('geography')) return 'Geography';
         if (text.includes('scienc') || text.includes('biolog') || text.includes('space')) return 'Science';
         if (text.includes('movi') || text.includes('game') || text.includes('pop')) return 'Pop Culture';
