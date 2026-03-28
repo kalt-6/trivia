@@ -247,8 +247,11 @@ window.App = {
         // Remove the "TYPE_HINT" tag from the array to just get the hint objects
         let hintData = options[0] === "TYPE_HINT" || options[0] === "TYPE" ? options.slice(1) : options;
         
-        // Randomize the order of the hints
-        hintData = hintData.sort(() => Math.random() - 0.5);
+        // Randomize the order of the hints using a true Fisher-Yates shuffle
+        for (let i = hintData.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [hintData[i], hintData[j]] = [hintData[j], hintData[i]];
+        }
         
         // Save the shuffled array to state so finishQuiz uses the exact same order
         State.quiz.hintData = hintData;
