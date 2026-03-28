@@ -7,22 +7,31 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="container">
-        <h1>Trivia Vault</h1>
-        
-        <div id="quiz-list-screen" class="screen active">
-            <h2>Select a Quiz</h2>
-            <div id="loading-text">Loading quizzes...</div>
-            <ul id="quizzes-container"></ul>
-        </div>
 
-        <div id="game-screen" class="screen">
-            <button id="back-btn">← Back to Quizzes</button>
-            <h2 id="question-text">Loading question...</h2>
-            <div id="options-container"></div>
-            <p id="feedback-text"></p>
-            <button id="next-btn" style="display: none;">Next Question</button>
-        </div>
+    <div id="home-screen" class="container screen active">
+        <h1>Trivia Vault</h1>
+        <h2>Select a Quiz</h2>
+        <ul id="quizzes-container">
+            <li>Loading quizzes...</li>
+        </ul>
+    </div>
+
+    <div id="quiz-screen" class="container screen">
+        <h1 id="quiz-title">Quiz Title</h1>
+        <h2 id="question-text">Question goes here...</h2>
+        
+        <div id="options-container">
+            </div>
+        
+        <div id="feedback-text"></div>
+        
+        <button id="next-btn" onclick="nextQuestion()" style="display: none; margin-top: 20px;">Next Question</button>
+    </div>
+
+    <div id="results-screen" class="container screen">
+        <h1>Results</h1>
+        <h2 id="score-display">You scored: 0!</h2>
+        <button onclick="returnHome()">Back to Menu</button>
     </div>
 
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
