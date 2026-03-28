@@ -97,9 +97,9 @@ window.App = {
         // NULL CHECK: Safely combines text even if title/description are missing in the DB
         const text = ((quiz.title || "") + " " + (quiz.description || "")).toLowerCase();
         
-        if (text.includes('countr') || text.includes('capit') || text.includes('geography')) return 'Geography';
-        if (text.includes('scienc') || text.includes('biolog') || text.includes('space')) return 'Science';
-        if (text.includes('movi') || text.includes('game') || text.includes('pop')) return 'Pop Culture';
+        if (text.includes('countr') || text.includes('capit') || text.includes('geography') || text.includes('state') || text.includes('ocean')) return 'Geography';
+        if (text.includes('scienc') || text.includes('biolog') || text.includes('space') || text.includes('planet') || text.includes('element')) return 'Science';
+        if (text.includes('movi') || text.includes('game') || text.includes('pop') || text.includes('song') || text.includes('oscar')) return 'Pop Culture';
         if (text.includes('art') || text.includes('mytholog') || text.includes('histor')) return 'History & Arts';
         if (text.includes('sport') || text.includes('food') || text.includes('culinary')) return 'Sports & Food';
         return 'General';
@@ -133,32 +133,49 @@ window.App = {
                 <h1 class="text-5xl md:text-6xl font-black text-primary mb-4 uppercase tracking-wider text-shadow">Select a Quiz!</h1>
             </div>
             ${filterHtml}
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 fade-in">
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 fade-in">
         `;
-
-        const icons = ['fa-globe-americas', 'fa-music', 'fa-paw', 'fa-hamburger', 'fa-film', 'fa-rocket', 'fa-keyboard'];
 
         if (displayedQuizzes.length === 0) {
             html += `<div class="col-span-full text-center py-10 text-text-light font-bold text-xl">No quizzes found in this category yet!</div>`;
         }
 
-        displayedQuizzes.forEach((quiz, index) => {
-            const icon = icons[index % icons.length];
+        // Smart icon mapping based on quiz content
+        const getQuizIconData = (quiz) => {
+            const title = (quiz.title || "").toLowerCase();
+            
+            if (title.includes('state')) return { icon: 'fa-map', color: 'text-blue-500', bg: 'bg-blue-100' };
+            if (title.includes('ocean') || title.includes('continent') || title.includes('geography')) return { icon: 'fa-globe-americas', color: 'text-green-500', bg: 'bg-green-100' };
+            if (title.includes('countr') || title.includes('europ') || title.includes('capit')) return { icon: 'fa-landmark', color: 'text-purple-500', bg: 'bg-purple-100' };
+            if (title.includes('element') || title.includes('scienc')) return { icon: 'fa-flask', color: 'text-teal-500', bg: 'bg-teal-100' };
+            if (title.includes('planet') || title.includes('solar')) return { icon: 'fa-meteor', color: 'text-orange-500', bg: 'bg-orange-100' };
+            if (title.includes('song') || title.includes('music') || title.includes('90s')) return { icon: 'fa-music', color: 'text-pink-500', bg: 'bg-pink-100' };
+            if (title.includes('oscar') || title.includes('movie')) return { icon: 'fa-film', color: 'text-yellow-500', bg: 'bg-yellow-100' };
+            
+            // Fallbacks by category
+            if (quiz.category === 'Geography') return { icon: 'fa-map-marked-alt', color: 'text-blue-500', bg: 'bg-blue-100' };
+            if (quiz.category === 'Science') return { icon: 'fa-microscope', color: 'text-teal-500', bg: 'bg-teal-100' };
+            if (quiz.category === 'Pop Culture') return { icon: 'fa-gamepad', color: 'text-pink-500', bg: 'bg-pink-100' };
+            if (quiz.category === 'History & Arts') return { icon: 'fa-palette', color: 'text-purple-500', bg: 'bg-purple-100' };
+            if (quiz.category === 'Sports & Food') return { icon: 'fa-football-ball', color: 'text-orange-500', bg: 'bg-orange-100' };
+            
+            return { icon: 'fa-star', color: 'text-gray-500', bg: 'bg-gray-200' };
+        };
+
+        displayedQuizzes.forEach((quiz) => {
             const safeTitle = (quiz.title || "Untitled").replace(/'/g, "\\'");
+            const iconData = getQuizIconData(quiz);
+            
             html += `
-                <div class="bouncy-card overflow-hidden hover:border-secondary transition-all duration-300 transform hover:-translate-y-2 cursor-pointer flex flex-col h-full bg-surface group" onclick="App.startQuiz('${quiz.id}', '${safeTitle}')">
-                    <div class="p-6 flex-grow text-center relative">
-                        <span class="absolute top-4 left-4 bg-background text-primary text-xs font-black px-3 py-1 rounded-full uppercase border border-primary">${quiz.category}</span>
-                        <div class="w-16 h-16 bg-background rounded-full flex items-center justify-center mx-auto mb-4 mt-6 border-2 border-primary group-hover:bg-primary transition-colors duration-300">
-                            <i class="fas ${icon} text-primary text-3xl group-hover:text-white"></i>
-                        </div>
-                        <h3 class="text-2xl font-extrabold text-text-main mb-2 uppercase tracking-wide">${quiz.title || "Untitled Quiz"}</h3>
-                        <p class="text-text-light font-bold text-sm">${quiz.description || ""}</p>
+                <button onclick="App.startQuiz('${quiz.id}', '${safeTitle}')" class="flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-3 p-4 bg-surface border border-gray-200 hover:border-primary hover:shadow-lg transition-all group rounded-xl cursor-pointer">
+                    <div class="p-3 rounded-lg flex items-center justify-center ${iconData.bg} ${iconData.color} group-hover:scale-110 transition-transform">
+                        <i class="fas ${iconData.icon} text-xl"></i>
                     </div>
-                    <div class="bg-primary group-hover:bg-secondary transition-colors duration-300 p-4 text-center mt-auto">
-                         <span class="text-white font-black text-lg uppercase tracking-widest">Play Now <i class="fas fa-play ml-2"></i></span>
+                    <div class="flex flex-col justify-center sm:pt-1">
+                        <span class="font-bold text-sm text-text-main leading-tight">${quiz.title || "Untitled Quiz"}</span>
+                        <span class="text-[10px] text-text-light mt-1 font-black uppercase tracking-wider hidden sm:block">Play Now <i class="fas fa-play text-[8px] ml-1"></i></span>
                     </div>
-                </div>
+                </button>
             `;
         });
 
