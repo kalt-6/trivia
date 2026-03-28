@@ -9,7 +9,7 @@ let currentQuestions = [];
 let currentQuestionIndex = 0;
 let score = 0;
 let correctlyTypedAnswers = [];
-let timerInterval; // <--- THIS WAS THE MISSING PIECE!
+let timerInterval; // <--- THE FIX: Global variable for the countdown
 
 // --- 3. DOM ELEMENTS ---
 const elements = {
@@ -61,7 +61,9 @@ async function startQuiz(quizId, title) {
 
 // --- 6. RENDER LOGIC ---
 function renderCurrentQuestion() {
-    clearInterval(timerInterval); // Stop any old timers
+    // Safely clear any existing timer
+    if (timerInterval) clearInterval(timerInterval);
+    
     const question = currentQuestions[currentQuestionIndex];
     elements.questionText.textContent = question.question_text;
     elements.optionsContainer.innerHTML = '';
@@ -70,6 +72,7 @@ function renderCurrentQuestion() {
 
     const optionsArray = typeof question.options === 'string' ? JSON.parse(question.options) : question.options;
 
+    // Determine Mode
     if (optionsArray[0] === "TYPE_HINT") {
         renderJetPunkGame(question, optionsArray.slice(1));
     } else if (optionsArray[0] === "TYPE") {
@@ -87,19 +90,22 @@ function renderCurrentQuestion() {
 // --- 7. JETPUNK MODE (HINTS + TIMER) ---
 function renderJetPunkGame(question, hintData) {
     correctlyTypedAnswers = [];
-    const validAnswers = question.correct_answer.split(',').map(a => a.trim());
+    const originalAnswers = question.correct_answer.split(',').map(a => a.trim());
+    const validAnswers = originalAnswers.map(a => a.toLowerCase());
     
     // Timer UI
     const timerBox = document.createElement('div');
-    timerBox.innerHTML = `<div style="font-size: 2rem; font-weight: 900; color: #ef4444; margin-bottom: 10px;">⏱️ <span id="timer-sec">60</span>s</div>`;
+    timerBox.innerHTML = `<div style="font-size: 2.2rem; font-weight: 900; color: #ef4444; margin-bottom: 15px;">⏱️ <span id="timer-sec">60</span>s</div>`;
     elements.optionsContainer.appendChild(timerBox);
 
     const input = document.createElement('input');
     input.type = 'text';
     input.placeholder = 'Type an answer...';
-    input.className = 'typing-input'; // Ensure this class exists in your CSS
     input.style.width = '100%';
     input.style.padding = '15px';
+    input.style.fontSize = '1.2rem';
+    input.style.borderRadius = '12px';
+    input.style.border = '3px solid var(--primary)';
     input.style.marginBottom = '20px';
     elements.optionsContainer.appendChild(input);
 
@@ -110,17 +116,19 @@ function renderJetPunkGame(question, hintData) {
     
     hintData.forEach((h, i) => {
         const item = document.createElement('div');
-        item.id = `hint-${i}`;
+        item.className = 'hint-card';
         item.style.border = '2px solid var(--primary)';
         item.style.borderRadius = '8px';
         item.style.padding = '10px';
-        item.innerHTML = `<div style="font-size: 0.8rem; color: var(--text-light)">${h.hint}</div><div class="answer-cell" style="font-weight: bold; color: #ccc;">???</div>`;
+        item.style.background = 'white';
+        item.innerHTML = `<div style="font-size: 0.75rem; color: var(--text-light); text-transform: uppercase;">${h.hint}</div>
+                          <div class="answer-cell" style="font-weight: 900; color: #e2e8f0;">???</div>`;
         grid.appendChild(item);
     });
     elements.optionsContainer.appendChild(grid);
 
     elements.nextBtn.style.display = 'block';
-    elements.nextBtn.textContent = "Finish / Next";
+    elements.nextBtn.textContent = "Give Up / Next";
 
     let timeLeft = 60;
     timerInterval = setInterval(() => {
@@ -129,21 +137,30 @@ function renderJetPunkGame(question, hintData) {
         if (timeLeft <= 0) {
             clearInterval(timerInterval);
             input.disabled = true;
-            elements.feedbackText.textContent = "Time's up!";
+            input.placeholder = "Time's up!";
+            elements.feedbackText.textContent = "Game Over!";
+            
+            // Reveal missed answers in Red
+            hintData.forEach((h, i) => {
+                const cell = grid.children[i].querySelector('.answer-cell');
+                if (cell.textContent === '???') {
+                    cell.textContent = h.answer;
+                    cell.style.color = '#ef4444';
+                }
+            });
         }
     }, 1000);
 
     input.addEventListener('input', () => {
         const guess = input.value.trim().toLowerCase();
-        const matchIdx = validAnswers.findIndex(a => a.toLowerCase() === guess);
+        const matchIdx = validAnswers.indexOf(guess);
         
-        if (matchIdx !== -1 && !correctlyTypedAnswers.includes(validAnswers[matchIdx])) {
-            const actualName = validAnswers[matchIdx];
-            correctlyTypedAnswers.push(actualName);
+        if (matchIdx !== -1 && !correctlyTypedAnswers.includes(guess)) {
+            correctlyTypedAnswers.push(guess);
             score++;
             
             const cell = grid.children[matchIdx].querySelector('.answer-cell');
-            cell.textContent = actualName;
+            cell.textContent = originalAnswers[matchIdx];
             cell.style.color = '#22c55e';
             
             input.value = '';
@@ -152,7 +169,7 @@ function renderJetPunkGame(question, hintData) {
             if (correctlyTypedAnswers.length === validAnswers.length) {
                 clearInterval(timerInterval);
                 input.disabled = true;
-                elements.feedbackText.textContent = "You got them all!";
+                elements.feedbackText.textContent = "Perfect!";
             }
         }
     });
@@ -161,7 +178,7 @@ function renderJetPunkGame(question, hintData) {
 
 // --- 8. NAVIGATION ---
 function nextQuestion() {
-    clearInterval(timerInterval);
+    if (timerInterval) clearInterval(timerInterval);
     currentQuestionIndex++;
     if (currentQuestionIndex < currentQuestions.length) renderCurrentQuestion();
     else showResults();
