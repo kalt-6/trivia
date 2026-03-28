@@ -136,7 +136,7 @@
                 : quizzes.filter(q => q.category === state.activeFilter);
 
             // Generate Filter Pills HTML
-            let filterHtml = `<div class="flex overflow-x-auto gap-3 pb-4 mb-8 justify-start md:justify-center no-scrollbar fade-in px-2">`;
+            let filterHtml = `<div class="flex overflow-x-auto gap-3 pb-4 mb-8 justify-start no-scrollbar fade-in px-4 w-full">`;
             categories.forEach(cat => {
                 const isActive = state.activeFilter === cat;
                 const baseClasses = "px-6 py-2 rounded-full font-black text-sm uppercase tracking-widest whitespace-nowrap transition-all cursor-pointer border-2";
