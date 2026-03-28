@@ -32,6 +32,7 @@ const State = {
         id: null,
         title: "",
         questionRow: null,
+        hintData: [], // Stores the active, shuffled hints
         relatedQuizzes: [],
         score: 0,
         totalAnswers: 0,
@@ -244,7 +245,13 @@ window.App = {
         catch(e) { console.error("Failed to parse options"); }
 
         // Remove the "TYPE_HINT" tag from the array to just get the hint objects
-        const hintData = options[0] === "TYPE_HINT" || options[0] === "TYPE" ? options.slice(1) : options;
+        let hintData = options[0] === "TYPE_HINT" || options[0] === "TYPE" ? options.slice(1) : options;
+        
+        // Randomize the order of the hints
+        hintData = hintData.sort(() => Math.random() - 0.5);
+        
+        // Save the shuffled array to state so finishQuiz uses the exact same order
+        State.quiz.hintData = hintData;
         State.quiz.totalAnswers = hintData.length;
         
         // Dynamic timer: 8 seconds per hint, minimum 30 seconds
@@ -347,10 +354,8 @@ window.App = {
             input.classList.add('opacity-50');
         }
 
-        // Reveal missing answers in red
-        const row = State.quiz.questionRow;
-        let options = typeof row.options === 'string' ? JSON.parse(row.options) : row.options;
-        const hintData = options[0] === "TYPE_HINT" || options[0] === "TYPE" ? options.slice(1) : options;
+        // Reveal missing answers in red using the saved, shuffled hintData
+        const hintData = State.quiz.hintData;
 
         hintData.forEach((h, i) => {
             const cell = document.getElementById(`ans-${i}`);
