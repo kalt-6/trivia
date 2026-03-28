@@ -1,14 +1,14 @@
 // --- 1. SUPABASE CONNECTION ---
 const supabaseUrl = 'https://pjjfnnzvwrhzvycjgkmz.supabase.co';
 const supabaseAnonKey = 'sb_publishable_J53ea-bCU35D1VSTK0l49A_b_BYW98W'; 
-const supabase = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
+const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
 
 // --- 2. STATE VARIABLES ---
 let currentQuizId = null;
 let currentQuestions = [];
 let currentQuestionIndex = 0;
 let score = 0;
-let correctlyTypedAnswers = [];
+let correctlyTypedAnswers = []; // Tracks found answers for typing quizzes
 
 // --- 3. DOM ELEMENTS ---
 const elements = {
@@ -33,10 +33,11 @@ async function init() {
 async function fetchQuizzes() {
     elements.quizzesContainer.innerHTML = '<li>Loading quizzes...</li>';
     
-    const { data, error } = await supabase
+    // Updated to use supabaseClient
+    const { data, error } = await supabaseClient
         .from('quizzes')
         .select('*')
-        .order('id', { ascending: true }); // Keeps your list organized
+        .order('id', { ascending: true });
 
     if (error) {
         console.error('Error fetching quizzes:', error);
@@ -75,7 +76,8 @@ async function startQuiz(quizId, title) {
     elements.feedbackText.textContent = '';
     elements.nextBtn.style.display = 'none';
 
-    const { data, error } = await supabase
+    // Updated to use supabaseClient
+    const { data, error } = await supabaseClient
         .from('questions')
         .select('*')
         .eq('quiz_id', quizId);
@@ -134,7 +136,8 @@ async function handleGuess(questionId, selectedOption, buttonElement) {
     elements.feedbackText.textContent = "Checking...";
     elements.feedbackText.className = '';
 
-    const { data: isCorrect, error } = await supabase.rpc('check_quiz_answer', {
+    // Updated to use supabaseClient
+    const { data: isCorrect, error } = await supabaseClient.rpc('check_quiz_answer', {
         q_id: questionId,
         user_guess: selectedOption
     });
@@ -209,8 +212,8 @@ function renderTypingGame(questionId) {
             elements.feedbackText.textContent = "Checking...";
             elements.feedbackText.className = '';
             
-            // Call our new Database Function
-            const { data: isCorrect, error } = await supabase.rpc('check_typed_answer', {
+            // Updated to use supabaseClient
+            const { data: isCorrect, error } = await supabaseClient.rpc('check_typed_answer', {
                 q_id: questionId,
                 typed_guess: guess
             });
