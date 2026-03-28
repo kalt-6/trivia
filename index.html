@@ -3,39 +3,329 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Trivia Vault</title>
-    <link rel="stylesheet" href="style.css">
-</head>
-<body>
-
-    <div id="home-screen" class="container screen active">
-        <h1>Trivia Vault</h1>
-        <h2>Select a Quiz</h2>
-        <ul id="quizzes-container">
-            <li>Loading quizzes...</li>
-        </ul>
-    </div>
-
-    <div id="quiz-screen" class="container screen">
-        <h1 id="quiz-title">Quiz Title</h1>
-        <h2 id="question-text">Question goes here...</h2>
-        
-        <div id="options-container">
-            </div>
-        
-        <div id="feedback-text"></div>
-        
-        <button id="next-btn" onclick="nextQuestion()" style="display: none; margin-top: 20px;">Next Question</button>
-    </div>
-
-    <div id="results-screen" class="container screen">
-        <h1>Results</h1>
-        <h2 id="score-display">You scored: 0!</h2>
-        <button onclick="returnHome()">Back to Menu</button>
-    </div>
-
-    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <title>Trivia Vault | Playful Edition</title>
     
-    <script src="app.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#8b5cf6',
+                        'primary-hover': '#7c3aed',
+                        secondary: '#ec4899',
+                        accent: '#f59e0b',
+                        background: '#fdf4ff',
+                        surface: '#ffffff',
+                        'text-main': '#1e293b',
+                        'text-light': '#64748b',
+                    },
+                    fontFamily: {
+                        sans: ['Nunito', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body { 
+            background-color: #fdf4ff; 
+            background-image: radial-gradient(#f59e0b 2px, transparent 2px); 
+            background-size: 30px 30px; 
+            color: #1e293b; 
+        }
+        
+        .bouncy-card {
+            border-radius: 24px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+            border: 4px solid #8b5cf6;
+            background: #ffffff;
+        }
+
+        .fade-in { animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        @keyframes popIn { 0% { transform: scale(0.9); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+
+        /* 3D Buttons */
+        .btn-3d {
+            transition: all 0.2s ease;
+            box-shadow: 0 6px 0px #7c3aed;
+        }
+        .btn-3d:hover:not(:disabled) { transform: translateY(2px); box-shadow: 0 4px 0px #7c3aed; }
+        .btn-3d:active:not(:disabled) { transform: translateY(6px); box-shadow: none; }
+
+        /* Colored Options */
+        .opt-0 { background-color: #ef4444; box-shadow: 0 6px 0px #b91c1c; color: white;}
+        .opt-1 { background-color: #3b82f6; box-shadow: 0 6px 0px #1d4ed8; color: white;}
+        .opt-2 { background-color: #eab308; box-shadow: 0 6px 0px #a16207; color: white;}
+        .opt-3 { background-color: #22c55e; box-shadow: 0 6px 0px #15803d; color: white;}
+        
+        .opt-btn:hover:not(:disabled) { filter: brightness(1.1); transform: translateY(2px); }
+        .opt-btn:active:not(:disabled) { transform: translateY(6px); box-shadow: none; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col font-sans">
+
+    <nav class="bg-surface border-b-4 border-primary sticky top-0 z-50 shadow-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-16">
+            <div class="flex items-center cursor-pointer transform transition hover:scale-105" onclick="init()">
+                <i class="fas fa-brain text-primary text-3xl mr-3"></i>
+                <span class="font-extrabold text-2xl tracking-tight text-text-main uppercase">Trivia<span class="text-primary">Vault</span></span>
+            </div>
+            <div class="flex space-x-4">
+                <button onclick="init()" class="text-text-light hover:text-primary text-lg font-bold">Home</button>
+            </div>
+        </div>
+    </nav>
+
+    <main class="flex-grow w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8" id="app-root">
+        </main>
+
+    <script>
+        // --- 1. SUPABASE CONNECTION ---
+        const supabaseUrl = 'https://pjjfnnzvwrhzvycjgkmz.supabase.co';
+        const supabaseAnonKey = 'sb_publishable_J53ea-bCU35D1VSTK0l49A_b_BYW98W';
+        const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
+
+        // --- 2. STATE VARIABLES ---
+        const appRoot = document.getElementById('app-root');
+        let quizzes = [];
+        let state = { currentQuizTitle: "", currentQuestions: [], currentIndex: 0, score: 0, isProcessing: false };
+        let correctlyTypedAnswers = [];
+
+        // --- 3. INITIAL LOAD ---
+        async function init() {
+            window.scrollTo(0,0);
+            appRoot.innerHTML = `
+                <div class="flex flex-col items-center justify-center mt-32 fade-in">
+                    <i class="fas fa-circle-notch fa-spin text-6xl text-primary mb-6"></i>
+                    <h2 class="text-3xl font-extrabold text-primary tracking-wide uppercase">Opening Vault...</h2>
+                </div>
+            `;
+
+            const { data, error } = await supabaseClient.from('quizzes').select('*').order('id', { ascending: true });
+
+            if (error) {
+                console.error('Error fetching quizzes:', error);
+                appRoot.innerHTML = `
+                    <div class="text-center text-red-500 mt-20 bouncy-card p-10 max-w-md mx-auto">
+                        <i class="fas fa-exclamation-triangle text-5xl mb-4"></i>
+                        <h2 class="text-3xl font-black uppercase">Database Error</h2>
+                        <p class="text-text-main mt-4 font-bold">Could not load quizzes. Check connection.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            quizzes = data;
+            renderHome();
+        }
+
+        // --- 4. RENDER HOME SCREEN ---
+        function renderHome() {
+            let html = `
+                <div class="text-center mb-12 fade-in">
+                    <h1 class="text-5xl md:text-6xl font-black text-primary mb-4 uppercase tracking-wider text-shadow">Select a Quiz!</h1>
+                    <p class="text-xl text-text-main font-bold max-w-2xl mx-auto">Test your knowledge across different categories.</p>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 fade-in">
+            `;
+
+            // Icons for visual flair
+            const icons = ['fa-globe-americas', 'fa-music', 'fa-paw', 'fa-hamburger', 'fa-film', 'fa-rocket', 'fa-keyboard'];
+
+            quizzes.forEach((quiz, index) => {
+                const icon = icons[index % icons.length];
+                html += `
+                    <div class="bouncy-card overflow-hidden hover:border-secondary transition-all duration-300 transform hover:-translate-y-2 cursor-pointer flex flex-col h-full bg-surface" onclick="startQuiz('${quiz.id}', '${quiz.title.replace(/'/g, "\\'")}')">
+                        <div class="p-6 flex-grow text-center">
+                            <div class="w-16 h-16 bg-background rounded-full flex items-center justify-center mx-auto mb-4 border-2 border-primary">
+                                <i class="fas ${icon} text-primary text-3xl"></i>
+                            </div>
+                            <h3 class="text-2xl font-extrabold text-text-main mb-2 uppercase tracking-wide">${quiz.title}</h3>
+                            <p class="text-text-light font-bold text-sm">${quiz.description}</p>
+                        </div>
+                        <div class="bg-primary p-4 text-center mt-auto">
+                             <span class="text-white font-black text-lg uppercase tracking-widest">Play Now <i class="fas fa-play ml-2"></i></span>
+                        </div>
+                    </div>
+                `;
+            });
+
+            html += `</div>`;
+            appRoot.innerHTML = html;
+        }
+
+        // --- 5. START QUIZ ---
+        async function startQuiz(quizId, title) {
+            appRoot.innerHTML = `<div class="text-center mt-32 text-primary fade-in"><i class="fas fa-spinner fa-spin text-6xl mb-6"></i><h2 class="text-3xl font-black uppercase">Loading Questions...</h2></div>`;
+            
+            const { data, error } = await supabaseClient.from('questions').select('*').eq('quiz_id', quizId);
+
+            if (error || data.length === 0) {
+                alert("Error loading questions!");
+                init();
+                return;
+            }
+
+            state = { currentQuizId: quizId, currentQuizTitle: title, currentQuestions: data, currentIndex: 0, score: 0, isProcessing: false };
+            renderQuizStep();
+        }
+
+        // --- 6. RENDER QUESTION SCREEN ---
+        function renderQuizStep() {
+            const question = state.currentQuestions[state.currentIndex];
+            const optionsArray = typeof question.options === 'string' ? JSON.parse(question.options) : question.options;
+            const isTypeIn = optionsArray.length === 1 && optionsArray[0] === "TYPE";
+
+            let uiHtml = `
+                <div class="max-w-3xl mx-auto bouncy-card p-6 md:p-10 fade-in text-center">
+                    <div class="flex justify-center items-center mb-6">
+                        <span class="bg-background text-primary border-2 border-primary font-black px-4 py-2 rounded-full tracking-widest uppercase text-sm">
+                            ${state.currentQuizTitle} - Q${state.currentIndex + 1}/${state.currentQuestions.length}
+                        </span>
+                    </div>
+                    <h2 class="text-3xl md:text-4xl font-black mb-8 text-text-main leading-tight">${question.question_text}</h2>
+            `;
+
+            if (isTypeIn) {
+                // JETPUNK TYPING UI
+                uiHtml += `
+                    <input type="text" id="type-input" autofocus class="w-full bg-surface border-4 border-primary p-5 rounded-2xl mb-6 text-text-main text-2xl font-bold text-center focus:border-secondary focus:ring-0 outline-none transition-all shadow-inner" placeholder="Type answer here..." autocomplete="off">
+                    <ul id="typed-answers-list" class="flex flex-wrap justify-center gap-3 mb-6 p-0 list-none"></ul>
+                    <div id="feedback" class="h-10 text-2xl font-black uppercase tracking-wide mb-6"></div>
+                    <button onclick="nextQuestion()" class="btn-3d w-full bg-text-light text-white py-4 rounded-xl font-black text-xl tracking-widest uppercase">I'm Done / Next</button>
+                </div>`;
+                appRoot.innerHTML = uiHtml;
+                setupTypingLogic(question);
+            } else {
+                // MULTIPLE CHOICE UI (2x2 Grid)
+                let optionsHtml = `<div class="grid grid-cols-1 sm:grid-cols-2 gap-4" id="btn-grid">`;
+                optionsArray.forEach((opt, i) => {
+                    optionsHtml += `
+                        <button onclick="submitMC('${question.id}', '${opt.replace(/'/g, "\\'")}', this)" class="opt-btn opt-${i % 4} btn-3d w-full p-6 rounded-2xl font-black text-xl md:text-2xl shadow-sm flex items-center justify-center text-center border-none">
+                            ${opt}
+                        </button>
+                    `;
+                });
+                optionsHtml += `</div>`;
+
+                uiHtml += `
+                    ${optionsHtml}
+                    <div id="feedback" class="mt-8 h-10 text-3xl font-black uppercase tracking-wide"></div>
+                    <button id="next-btn" onclick="nextQuestion()" class="btn-3d w-full bg-primary text-white py-4 mt-6 rounded-xl font-black text-xl tracking-widest uppercase hidden">Next Question</button>
+                </div>`;
+                appRoot.innerHTML = uiHtml;
+            }
+        }
+
+        // --- 7. HANDLING MULTIPLE CHOICE ---
+        async function submitMC(questionId, selectedOption, btnElement) {
+            if (state.isProcessing) return;
+            state.isProcessing = true;
+            
+            // Disable all buttons
+            const allBtns = document.querySelectorAll('.opt-btn');
+            allBtns.forEach(b => { b.disabled = true; b.style.opacity = '0.7'; });
+            btnElement.style.opacity = '1';
+
+            const feedback = document.getElementById('feedback');
+            feedback.innerHTML = `<span class="text-text-light"><i class="fas fa-spinner fa-spin mr-2"></i>Checking...</span>`;
+
+            const { data: isCorrect, error } = await supabaseClient.rpc('check_quiz_answer', { q_id: questionId, user_guess: selectedOption });
+
+            if (isCorrect) {
+                state.score++;
+                btnElement.style.backgroundColor = '#22c55e'; // Force Green
+                btnElement.style.boxShadow = '0 6px 0px #15803d';
+                feedback.innerHTML = `<span class="text-green-500"><i class="fas fa-check-circle mr-2"></i>Correct!</span>`;
+            } else {
+                btnElement.style.backgroundColor = '#ef4444'; // Force Red
+                btnElement.style.boxShadow = '0 6px 0px #b91c1c';
+                feedback.innerHTML = `<span class="text-red-500"><i class="fas fa-times-circle mr-2"></i>Incorrect!</span>`;
+            }
+
+            document.getElementById('next-btn').classList.remove('hidden');
+        }
+
+        // --- 8. HANDLING JETPUNK TYPING ---
+        function setupTypingLogic(question) {
+            correctlyTypedAnswers = []; 
+            const validAnswers = question.correct_answer.split(',').map(a => a.trim());
+            const input = document.getElementById('type-input');
+            const answersList = document.getElementById('typed-answers-list');
+            const feedback = document.getElementById('feedback');
+
+            setTimeout(() => input.focus(), 100);
+
+            input.addEventListener('input', function () {
+                const guess = input.value.trim().toLowerCase();
+                if (guess === '') return;
+                
+                const matchedAnswer = validAnswers.find(answer => answer.toLowerCase() === guess);
+
+                if (matchedAnswer && !correctlyTypedAnswers.includes(matchedAnswer)) {
+                    correctlyTypedAnswers.push(matchedAnswer);
+                    state.score++; 
+                    
+                    const li = document.createElement('li');
+                    li.innerHTML = `<span class="bg-green-500 text-white font-black px-4 py-2 rounded-full text-lg shadow-md block fade-in"><i class="fas fa-check mr-2"></i>${matchedAnswer}</span>`;
+                    answersList.appendChild(li);
+                    
+                    feedback.innerHTML = `<span class="text-green-500">Found: ${correctlyTypedAnswers.length} / ${validAnswers.length}</span>`;
+                    input.value = ''; 
+                }
+            });
+        }
+
+        // --- 9. NAVIGATION & RESULTS ---
+        function nextQuestion() {
+            state.isProcessing = false;
+            state.currentIndex++;
+            if (state.currentIndex < state.currentQuestions.length) {
+                renderQuizStep();
+            } else {
+                renderResults();
+            }
+        }
+
+        function renderResults() {
+            // Because typing questions have many points, we calculate total possible points differently
+            let totalPossible = 0;
+            state.currentQuestions.forEach(q => {
+                const opts = typeof q.options === 'string' ? JSON.parse(q.options) : q.options;
+                if (opts.length === 1 && opts[0] === "TYPE") {
+                    totalPossible += q.correct_answer.split(',').length;
+                } else {
+                    totalPossible += 1;
+                }
+            });
+
+            appRoot.innerHTML = `
+                <div class="max-w-lg mx-auto text-center bouncy-card p-12 fade-in">
+                    <div class="w-24 h-24 bg-primary rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg border-4 border-background">
+                        <i class="fas fa-trophy text-5xl text-accent"></i>
+                    </div>
+                    <h2 class="text-4xl font-black mb-2 text-text-main uppercase tracking-widest">Quiz Complete!</h2>
+                    
+                    <div class="text-7xl font-black text-primary my-8 tracking-tighter drop-shadow-md">
+                        ${state.score} <span class="text-3xl text-text-light">/ ${totalPossible}</span>
+                    </div>
+                    
+                    <div class="space-y-4 mt-8">
+                        <button onclick="init()" class="btn-3d w-full bg-secondary text-white py-4 rounded-xl font-black text-xl uppercase tracking-widest">Back to Vault</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Start
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
 </body>
 </html>
