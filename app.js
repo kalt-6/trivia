@@ -8,7 +8,7 @@ let currentQuizId = null;
 let currentQuestions = [];
 let currentQuestionIndex = 0;
 let score = 0;
-let correctlyTypedAnswers = []; // Tracks found answers for typing quizzes
+let correctlyTypedAnswers = [];
 
 // --- 3. DOM ELEMENTS ---
 const elements = {
@@ -33,7 +33,6 @@ async function init() {
 async function fetchQuizzes() {
     elements.quizzesContainer.innerHTML = '<li>Loading quizzes...</li>';
     
-    // Updated to use supabaseClient
     const { data, error } = await supabaseClient
         .from('quizzes')
         .select('*')
@@ -76,7 +75,6 @@ async function startQuiz(quizId, title) {
     elements.feedbackText.textContent = '';
     elements.nextBtn.style.display = 'none';
 
-    // Updated to use supabaseClient
     const { data, error } = await supabaseClient
         .from('questions')
         .select('*')
@@ -105,7 +103,6 @@ function renderCurrentQuestion() {
     elements.optionsContainer.innerHTML = '';
     elements.feedbackText.textContent = '';
     
-    // Reset next button text
     elements.nextBtn.textContent = "Next Question"; 
     elements.nextBtn.style.display = 'none';
 
@@ -113,11 +110,10 @@ function renderCurrentQuestion() {
         ? JSON.parse(question.options) 
         : question.options;
 
-    // THE MAGIC: Check if this is a JetPunk-style typing quiz!
+    // Detect JetPunk-style typing quiz
     if (optionsArray.length === 1 && optionsArray[0] === "TYPE") {
-        renderTypingGame(question.id);
+        renderTypingGame(question);
     } else {
-        // Standard Multiple Choice Buttons
         optionsArray.forEach(option => {
             const btn = document.createElement('button');
             btn.textContent = option;
@@ -129,14 +125,12 @@ function renderCurrentQuestion() {
 
 // HANDLER: Multiple Choice Questions
 async function handleGuess(questionId, selectedOption, buttonElement) {
-    // Disable all buttons so they can't guess again
     const allButtons = elements.optionsContainer.querySelectorAll('button');
     allButtons.forEach(btn => btn.disabled = true);
 
     elements.feedbackText.textContent = "Checking...";
     elements.feedbackText.className = '';
 
-    // Updated to use supabaseClient
     const { data: isCorrect, error } = await supabaseClient.rpc('check_quiz_answer', {
         q_id: questionId,
         user_guess: selectedOption
@@ -149,12 +143,12 @@ async function handleGuess(questionId, selectedOption, buttonElement) {
     }
 
     if (isCorrect) {
-        buttonElement.style.backgroundColor = '#22c55e'; // Green
+        buttonElement.style.backgroundColor = '#22c55e'; 
         elements.feedbackText.textContent = "Correct!";
         elements.feedbackText.className = 'correct';
         score++;
     } else {
-        buttonElement.style.backgroundColor = '#ef4444'; // Red
+        buttonElement.style.backgroundColor = '#ef4444'; 
         elements.feedbackText.textContent = "Incorrect!";
         elements.feedbackText.className = 'incorrect';
     }
@@ -162,87 +156,74 @@ async function handleGuess(questionId, selectedOption, buttonElement) {
     elements.nextBtn.style.display = 'block';
 }
 
-// HANDLER: JetPunk Typing Questions
-function renderTypingGame(questionId) {
-    correctlyTypedAnswers = []; // Reset list for this question
+// HANDLER: JetPunk Typing Questions (INSTANT SUBMIT UPDATE)
+function renderTypingGame(question) {
+    correctlyTypedAnswers = []; 
     
-    // Create an input box
+    // Parse the database answer string into an array of perfectly capitalized countries
+    const validAnswers = question.correct_answer.split(',').map(a => a.trim());
+    
+    // Create the input box
     const input = document.createElement('input');
     input.type = 'text';
-    input.placeholder = 'Type an answer and press Enter...';
+    input.placeholder = 'Type a country...';
     input.style.width = '100%';
+    input.style.boxSizing = 'border-box'; // Keeps it perfectly inside the container
     input.style.padding = '15px';
     input.style.fontSize = '1.2rem';
     input.style.borderRadius = '12px';
     input.style.border = '2px solid var(--primary)';
     input.style.outline = 'none';
-    input.style.marginBottom = '15px';
+    input.style.marginBottom = '20px'; // Forces space below it
+    input.style.display = 'block';
     
-    // Create a list to show the answers they get right
+    // Create a flexbox list to show the answers
     const answersList = document.createElement('ul');
     answersList.id = 'typed-answers-list';
     answersList.style.display = 'flex';
     answersList.style.flexWrap = 'wrap';
+    answersList.style.justifyContent = 'center';
     answersList.style.gap = '10px';
+    answersList.style.padding = '0';
 
     elements.optionsContainer.appendChild(input);
     elements.optionsContainer.appendChild(answersList);
 
-    // Show the "Next" button immediately so they can give up when stuck
     elements.nextBtn.textContent = "I'm Done / Next";
     elements.nextBtn.style.display = 'block';
 
-    // Automatically focus the input box so they can start typing right away
     setTimeout(() => input.focus(), 100);
 
-    // Listen for the "Enter" key
-    input.addEventListener('keypress', async function (e) {
-        if (e.key === 'Enter') {
-            const guess = input.value.trim();
-            if (guess === '') return;
-            
-            // Prevent duplicate correct answers
-            if (correctlyTypedAnswers.map(a => a.toLowerCase()).includes(guess.toLowerCase())) {
-                elements.feedbackText.textContent = "You already guessed that!";
-                elements.feedbackText.className = 'incorrect';
-                input.value = '';
-                return;
-            }
+    // THE MAGIC: Listen to EVERY keystroke, not just "Enter"
+    input.addEventListener('input', function () {
+        const guess = input.value.trim().toLowerCase();
+        if (guess === '') return;
+        
+        // Check if what they typed matches any valid answer (case-insensitive)
+        const matchedAnswer = validAnswers.find(answer => answer.toLowerCase() === guess);
 
-            elements.feedbackText.textContent = "Checking...";
-            elements.feedbackText.className = '';
-            
-            // Updated to use supabaseClient
-            const { data: isCorrect, error } = await supabaseClient.rpc('check_typed_answer', {
-                q_id: questionId,
-                typed_guess: guess
-            });
-
-            if (error) {
-                console.error("Error checking typed answer:", error);
-                elements.feedbackText.textContent = "Error checking answer.";
-                return;
-            }
-
-            if (isCorrect) {
-                correctlyTypedAnswers.push(guess);
-                score++; // They get a point for EVERY country they guess!
+        if (matchedAnswer) {
+            // Check if they already got this one
+            if (!correctlyTypedAnswers.includes(matchedAnswer)) {
+                correctlyTypedAnswers.push(matchedAnswer);
+                score++; 
                 
-                // Add to visual list
+                // Add to visual list (Using the perfectly capitalized matchedAnswer!)
                 const li = document.createElement('li');
-                li.textContent = guess;
-                li.style.background = '#22c55e'; // Green
+                li.textContent = matchedAnswer;
+                li.style.background = '#22c55e'; 
                 li.style.color = 'white';
                 li.style.padding = '8px 15px';
                 li.style.borderRadius = '20px';
+                li.style.fontWeight = 'bold';
+                li.style.animation = 'popIn 0.3s ease'; // Tiny animation
                 answersList.appendChild(li);
                 
-                elements.feedbackText.textContent = `Correct! (${correctlyTypedAnswers.length} found)`;
+                elements.feedbackText.textContent = `Correct! (${correctlyTypedAnswers.length} / ${validAnswers.length})`;
                 elements.feedbackText.className = 'correct';
-                input.value = ''; // Clear box
-            } else {
-                elements.feedbackText.textContent = "Not on the list!";
-                elements.feedbackText.className = 'incorrect';
+                
+                // INSTANTLY clear the box for the next country
+                input.value = ''; 
             }
         }
     });
@@ -270,9 +251,7 @@ function returnHome() {
     fetchQuizzes();
 }
 
-// Attach navigation functions to the window so HTML buttons can trigger them
 window.nextQuestion = nextQuestion;
 window.returnHome = returnHome;
 
-// Start the app
 init();
