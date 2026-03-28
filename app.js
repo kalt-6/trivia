@@ -1,3 +1,5 @@
+console.log("⚡ App.js Loaded - Shuffling is ACTIVE! ⚡");
+
 /**************************************************************
  * 1. DATABASE SETUP
  **************************************************************/
@@ -15,7 +17,6 @@ const DB = {
         return await this.client.from('quizzes').select('*').order('id', { ascending: true });
     },
     async fetchQuestions(quizId) {
-        // Since we migrated, this now returns 1 row containing all the hints/answers
         return await this.client.from('questions').select('*').eq('quiz_id', quizId);
     }
 };
@@ -32,11 +33,11 @@ const State = {
         id: null,
         title: "",
         questionRow: null,
-        hintData: [], // Stores the active, shuffled hints
+        hintData: [], 
         relatedQuizzes: [],
         score: 0,
         totalAnswers: 0,
-        typedIndices: [], // Tracks which specific answers have been guessed
+        typedIndices: [], 
         timerInterval: null
     },
     clearTimer() {
@@ -51,7 +52,6 @@ const State = {
  * 3. APPLICATION LOGIC
  **************************************************************/
 window.App = {
-    // --- Initialization & Navigation ---
     init: async () => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
         State.clearTimer();
@@ -73,7 +73,6 @@ window.App = {
 
             State.quizzes = data.map(quiz => ({ ...quiz, category: App.categorizeQuiz(quiz) }));
 
-            // Check URL for direct routing
             const urlParams = new URLSearchParams(window.location.search);
             const quizTitleFromURL = urlParams.get('quiz');
             
@@ -116,7 +115,6 @@ window.App = {
         return 'General';
     },
 
-    // --- Home Screen ---
     setFilter: (category) => {
         State.activeFilter = category;
         App.renderHome();
@@ -183,7 +181,6 @@ window.App = {
         root.innerHTML = html;
     },
 
-    // --- Quiz Logic ---
     startQuiz: async (quizId, title, pushState = true) => {
         if (pushState) {
             window.history.pushState({}, '', `?quiz=${encodeURIComponent(title)}`);
@@ -204,7 +201,7 @@ window.App = {
             State.quiz = {
                 id: quizId,
                 title: title,
-                questionRow: data[0], // Only 1 row per quiz now!
+                questionRow: data[0],
                 score: 0,
                 typedIndices: [],
                 timerInterval: null,
@@ -239,27 +236,23 @@ window.App = {
         State.clearTimer();
         const row = State.quiz.questionRow;
         
-        // Parse options safely
         let options = [];
         try { options = typeof row.options === 'string' ? JSON.parse(row.options) : row.options; } 
         catch(e) { console.error("Failed to parse options"); }
 
-        // Safely clone the array so we don't mutate the original database pull
+        // Clone the array cleanly to break any references
         let hintData = options[0] === "TYPE_HINT" || options[0] === "TYPE" ? [...options.slice(1)] : [...options];
         
-        // True Fisher-Yates Shuffle
+        // ⚡ THE SHUFFLE ALGORITHM ⚡
         for (let i = hintData.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
-            const temp = hintData[i];
-            hintData[i] = hintData[j];
-            hintData[j] = temp;
+            // Swap items
+            [hintData[i], hintData[j]] = [hintData[j], hintData[i]];
         }
         
-        // Save the shuffled array to state so finishQuiz uses the exact same order
         State.quiz.hintData = hintData;
         State.quiz.totalAnswers = hintData.length;
         
-        // Dynamic timer: 8 seconds per hint, minimum 30 seconds
         const allottedTime = Math.max(hintData.length * 8, 30); 
         
         let quizHtml = `
@@ -277,9 +270,7 @@ window.App = {
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6 max-h-[50vh] overflow-y-auto p-2 border-2 border-background rounded-xl bg-background/30 shadow-inner">
         `;
 
-        // Render the Hints Grid
         hintData.forEach((h, i) => {
-            // Using 50/50 split for Hint and Answer area as requested
             quizHtml += `
             <div class="flex border-2 border-primary rounded-xl overflow-hidden shadow-sm bg-surface transition-colors duration-300">
                 <div class="bg-background text-primary font-bold p-3 w-1/2 border-r-2 border-primary flex items-center justify-start text-left text-sm md:text-base">${h.hint || "?"}</div>
@@ -312,7 +303,7 @@ window.App = {
             timeLeft--;
             timerDisplay.textContent = timeLeft;
             if (timeLeft <= 0) {
-                App.finishQuiz(); // Auto-finish when time is up
+                App.finishQuiz(); 
             }
         }, 1000);
 
@@ -322,14 +313,12 @@ window.App = {
             const guess = input.value.trim().toLowerCase();
             if (guess === '') return;
             
-            // Find the index of the matched answer that hasn't been typed yet
             const matchIndex = validAnswers.findIndex((ans, idx) => ans === guess && !State.quiz.typedIndices.includes(idx));
             
             if (matchIndex !== -1) {
                 State.quiz.typedIndices.push(matchIndex);
                 State.quiz.score++;
                 
-                // Update UI immediately
                 const cell = document.getElementById(`ans-${matchIndex}`);
                 if (cell) {
                     cell.textContent = hintData[matchIndex].answer;
@@ -340,7 +329,6 @@ window.App = {
                 feedback.innerHTML = `<span class="text-green-500 fade-in"><i class="fas fa-star text-accent mr-2"></i> Found: ${State.quiz.score} / ${State.quiz.totalAnswers}</span>`;
                 input.value = '';
                 
-                // Check Win Condition
                 if (State.quiz.score === State.quiz.totalAnswers) {
                     App.finishQuiz();
                 }
@@ -359,7 +347,6 @@ window.App = {
             input.classList.add('opacity-50');
         }
 
-        // Reveal missing answers in red using the saved, shuffled hintData
         const hintData = State.quiz.hintData;
 
         hintData.forEach((h, i) => {
@@ -371,7 +358,6 @@ window.App = {
             }
         });
 
-        // Wait 2.5 seconds so they can see what they missed, then show results
         if (feedback) feedback.innerHTML = `<span class="text-primary fade-in">Calculating Results...</span>`;
         setTimeout(() => App.renderResults(), 2500);
     },
