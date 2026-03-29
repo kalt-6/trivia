@@ -120,7 +120,6 @@ window.App = {
     // Quizzes Grid Section (Left column)
     html += `<div class="flex-grow">`;
     
-    // 👇 WE MOVED THE TITLE HERE! Now it centers perfectly over the grid 👇
     html += `<div class="text-center mb-8 fade-in"><h1 class="text-5xl md:text-6xl font-black text-primary mb-4 uppercase tracking-wider text-shadow">Select a Quiz!</h1></div>`;
     html += filterHtml; 
     
@@ -152,12 +151,12 @@ window.App = {
         </button>`;
     });
 
-    html += `</div></div>`; // Close grid and quizzes section
+    html += `</div></div>`;
 
-    // 3. Purple Info Box Section (Right side)
+    // 3. Purple Info Box Section (Right side) - Removed 'sticky' and 'top-6'
     html += `
       <div class="w-full lg:w-1/3 xl:w-1/4 flex-shrink-0">
-        <div class="bg-purple-600 text-white p-6 md:p-8 rounded-2xl shadow-xl sticky top-6 border-4 border-purple-500">
+        <div class="bg-purple-600 text-white p-6 md:p-8 rounded-2xl shadow-xl border-4 border-purple-500">
           <h3 class="text-2xl font-black mb-4 flex items-center gap-2"><i class="fas fa-info-circle text-purple-300"></i> About the Vault</h3>
           <p class="mb-4 font-medium leading-relaxed text-purple-50">Welcome to Trivia Vault! We have dozens of fast-paced typing quizzes testing your knowledge on everything from Geography to Pop Culture.</p>
           <p class="mb-6 font-medium leading-relaxed text-purple-50">Pick a category, choose a quiz, and start typing as fast as you can. You get 10 seconds per question, so think quickly!</p>
@@ -174,7 +173,7 @@ window.App = {
       </div>
     `;
 
-    html += `</div>`; // Close main flex container
+    html += `</div>`;
 
     root.innerHTML = html;
   },
