@@ -114,14 +114,19 @@ window.App = {
     });
     filterHtml += `</div>`;
 
-    // Header
-    let html = `<div class="text-center mb-8 fade-in"><h1 class="text-5xl md:text-6xl font-black text-primary mb-4 uppercase tracking-wider text-shadow">Select a Quiz!</h1></div>${filterHtml}`;
+    // Header (Removed the filterHtml from here!)
+    let html = `<div class="text-center mb-8 fade-in"><h1 class="text-5xl md:text-6xl font-black text-primary mb-4 uppercase tracking-wider text-shadow">Select a Quiz!</h1></div>`;
 
     // 2. Start Layout: Quizzes on left, Info box on right
     html += `<div class="flex flex-col lg:flex-row gap-6 w-full fade-in max-w-[1600px] mx-auto">`;
     
     // Quizzes Grid Section
-    html += `<div class="flex-grow"><div class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">`;
+    html += `<div class="flex-grow">`;
+    
+    // 👇 WE MOVED THE FILTERS HERE! Now they only center over the quiz grid 👇
+    html += filterHtml; 
+    
+    html += `<div class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">`;
 
     // Dynamic icons and colors powered by your database!
     const getQuizIconData = (quiz) => {
