@@ -102,7 +102,7 @@ window.App = {
     App.renderHome();
   },
 
-  renderHome: () => {
+ renderHome: () => {
     const root = document.getElementById('app-root');
     const displayedQuizzes = State.activeFilter === 'All' ? State.quizzes : State.quizzes.filter(q => q.category === State.activeFilter);
 
@@ -114,16 +114,14 @@ window.App = {
     });
     filterHtml += `</div>`;
 
-    // Header (Removed the filterHtml from here!)
-    let html = `<div class="text-center mb-8 fade-in"><h1 class="text-5xl md:text-6xl font-black text-primary mb-4 uppercase tracking-wider text-shadow">Select a Quiz!</h1></div>`;
-
     // 2. Start Layout: Quizzes on left, Info box on right
-    html += `<div class="flex flex-col lg:flex-row gap-6 w-full fade-in max-w-[1600px] mx-auto">`;
+    let html = `<div class="flex flex-col lg:flex-row gap-6 w-full fade-in max-w-[1600px] mx-auto">`;
     
-    // Quizzes Grid Section
+    // Quizzes Grid Section (Left column)
     html += `<div class="flex-grow">`;
     
-    // 👇 WE MOVED THE FILTERS HERE! Now they only center over the quiz grid 👇
+    // 👇 WE MOVED THE TITLE HERE! Now it centers perfectly over the grid 👇
+    html += `<div class="text-center mb-8 fade-in"><h1 class="text-5xl md:text-6xl font-black text-primary mb-4 uppercase tracking-wider text-shadow">Select a Quiz!</h1></div>`;
     html += filterHtml; 
     
     html += `<div class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">`;
@@ -176,7 +174,7 @@ window.App = {
       </div>
     `;
 
-    html += `</div>`;
+    html += `</div>`; // Close main flex container
 
     root.innerHTML = html;
   },
