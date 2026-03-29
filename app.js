@@ -106,14 +106,22 @@ window.App = {
     const root = document.getElementById('app-root');
     const displayedQuizzes = State.activeFilter === 'All' ? State.quizzes : State.quizzes.filter(q => q.category === State.activeFilter);
 
-    let filterHtml = `<div class="flex overflow-x-auto gap-3 pb-4 mb-8 justify-start no-scrollbar fade-in px-4 w-full">`;
+    // 1. Centered, wrapping filter buttons
+    let filterHtml = `<div class="flex flex-wrap gap-3 pb-4 mb-8 justify-center fade-in px-4 w-full">`;
     State.categories.forEach(cat => {
       const active = State.activeFilter === cat ? "bg-primary text-white border-primary shadow-lg transform scale-105" : "bg-surface text-text-light border-gray-200 hover:border-primary hover:text-primary";
       filterHtml += `<button onclick="App.setFilter('${cat}')" class="px-6 py-2 rounded-full font-black text-sm uppercase tracking-widest whitespace-nowrap transition-all cursor-pointer border-2 ${active}">${cat}</button>`;
     });
     filterHtml += `</div>`;
 
-    let html = `<div class="text-center mb-8 fade-in"><h1 class="text-5xl md:text-6xl font-black text-primary mb-4 uppercase tracking-wider text-shadow">Select a Quiz!</h1></div>${filterHtml}<div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 fade-in">`;
+    // Header
+    let html = `<div class="text-center mb-8 fade-in"><h1 class="text-5xl md:text-6xl font-black text-primary mb-4 uppercase tracking-wider text-shadow">Select a Quiz!</h1></div>${filterHtml}`;
+
+    // 2. Start Layout: Quizzes on left, Info box on right
+    html += `<div class="flex flex-col lg:flex-row gap-6 w-full fade-in max-w-[1600px] mx-auto">`;
+    
+    // Quizzes Grid Section
+    html += `<div class="flex-grow"><div class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">`;
 
     // Dynamic icons and colors powered by your database!
     const getQuizIconData = (quiz) => {
@@ -141,7 +149,31 @@ window.App = {
         </button>`;
     });
 
-    root.innerHTML = html + `</div>`;
+    html += `</div></div>`; // Close grid and quizzes section
+
+    // 3. Purple Info Box Section (Right side)
+    html += `
+      <div class="w-full lg:w-1/3 xl:w-1/4 flex-shrink-0">
+        <div class="bg-purple-600 text-white p-6 md:p-8 rounded-2xl shadow-xl sticky top-6 border-4 border-purple-500">
+          <h3 class="text-2xl font-black mb-4 flex items-center gap-2"><i class="fas fa-info-circle text-purple-300"></i> About the Vault</h3>
+          <p class="mb-4 font-medium leading-relaxed text-purple-50">Welcome to Trivia Vault! We have dozens of fast-paced typing quizzes testing your knowledge on everything from Geography to Pop Culture.</p>
+          <p class="mb-6 font-medium leading-relaxed text-purple-50">Pick a category, choose a quiz, and start typing as fast as you can. You get 10 seconds per question, so think quickly!</p>
+          
+          <div class="bg-purple-800/60 p-5 rounded-xl border border-purple-500/50">
+            <p class="font-black text-sm uppercase tracking-widest text-purple-200 mb-3">Current Stats:</p>
+            <ul class="text-sm font-bold space-y-3">
+              <li class="flex items-center"><i class="fas fa-check-circle text-green-400 mr-3 text-lg"></i> ${State.quizzes.length} Quizzes Available</li>
+              <li class="flex items-center"><i class="fas fa-bolt text-yellow-400 mr-3 text-lg"></i> Dynamic Time Limits</li>
+              <li class="flex items-center"><i class="fas fa-palette text-pink-400 mr-3 text-lg"></i> Custom Themes & Icons</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    `;
+
+    html += `</div>`;
+
+    root.innerHTML = html;
   },
 
   startQuiz: async (quizId, title, pushState = true) => {
