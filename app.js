@@ -179,91 +179,93 @@ window.App = {
     },
 
     renderQuizStep: () => {
-        State.clearTimer();
-        const qData = State.quiz.questionData;
-        let optionsArray = typeof qData.options === 'string' ? JSON.parse(qData.options) : qData.options;
-        const hintData = optionsArray.slice(1);
-
-        // Calculate rows for the grid so it perfectly flows Top-to-Bottom, Left-to-Right
-        const rows = Math.ceil(hintData.length / 2);
-
-        let quizHtml = `
-        <div class="max-w-4xl mx-auto bouncy-card p-6 md:p-10 fade-in flex-grow flex flex-col justify-between">
-            <h2 class="text-2xl md:text-4xl font-black text-center mb-8 text-text-main leading-tight">${State.quiz.title} (60 Seconds!)</h2>
-            
-            <div class="sticky top-0 z-30 bg-surface pb-4 mb-2 pt-2 border-b border-transparent shadow-[0_15px_15px_-15px_rgba(0,0,0,0.1)]">
-                <div class="flex justify-between items-center mb-4 px-4 bg-background p-3 rounded-xl border-2 border-primary">
-                    <div class="text-2xl font-black text-red-500"><i class="fas fa-stopwatch mr-2"></i><span id="timer-display">60</span>s</div>
-                    <div id="feedback" class="text-xl font-black uppercase tracking-wide text-text-light">Start Typing...</div>
-                </div>
-                <input type="text" id="type-input" class="w-full bg-surface border-4 border-primary p-5 rounded-2xl text-text-main text-2xl font-bold text-center focus:border-secondary focus:ring-0 outline-none transition-all shadow-inner" placeholder="Type answer here..." autocomplete="off">
-            </div>
-
-            <div class="grid gap-3 mb-6 p-2 border-2 border-background rounded-xl bg-background/30 shadow-inner" 
-                 style="grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); grid-template-rows: repeat(${rows}, auto); grid-auto-flow: column;">
-        `;
-
-        hintData.forEach((h, i) => {
-            quizHtml += `
-            <div class="flex border-2 border-primary rounded-xl overflow-hidden shadow-sm bg-surface">
-                <div class="bg-background text-primary font-bold p-3 w-1/2 border-r-2 border-primary flex items-center justify-start text-left text-sm md:text-base">${h.hint || "?"}</div>
-                <div id="ans-${i}" class="p-3 w-1/2 font-black flex items-center justify-center text-center text-gray-300 transition-colors duration-300">???</div>
-            </div>`;
-        });
-
-        quizHtml += `
-            </div>
-            <button onclick="App.finishQuiz()" id="finish-btn" class="btn-3d w-full bg-text-light text-white py-4 mt-4 rounded-xl font-black text-lg md:text-xl tracking-widest uppercase hover:bg-text-main transition-colors">Give Up / Finish</button>
+  State.clearTimer();
+  const qData = State.quiz.questionData;
+  let optionsArray = typeof qData.options === 'string' ? JSON.parse(qData.options) : qData.options;
+  const hintData = optionsArray.slice(1);
+  
+  // ⏱ Calculate dynamic time: 10 seconds per question
+  const totalTime = hintData.length * 10;
+  
+  // Calculate rows for the grid so it perfectly flows Top-to-Bottom, Left-to-Right
+  const rows = Math.ceil(hintData.length / 2);
+  let quizHtml = `
+    <div class="max-w-4xl mx-auto bouncy-card p-6 md:p-10 fade-in flex-grow flex flex-col justify-between">
+      <h2 class="text-2xl md:text-4xl font-black text-center mb-8 text-text-main leading-tight">${State.quiz.title} (${totalTime} Seconds!)</h2>
+      <div class="sticky top-0 z-30 bg-surface pb-4 mb-2 pt-2 border-b border-transparent shadow-[0_15px_15px_-15px_rgba(0,0,0,0.1)]">
+        <div class="flex justify-between items-center mb-4 px-4 bg-background p-3 rounded-xl border-2 border-primary">
+          <div class="text-2xl font-black text-red-500"><i class="fas fa-stopwatch mr-2"></i><span id="timer-display">${totalTime}</span>s</div>
+          <div id="feedback" class="text-xl font-black uppercase tracking-wide text-text-light">Start Typing...</div>
+        </div>
+        <input type="text" id="type-input" class="w-full bg-surface border-4 border-primary p-5 rounded-2xl text-text-main text-2xl font-bold text-center focus:border-secondary focus:ring-0 outline-none transition-all shadow-inner" placeholder="Type answer here..." autocomplete="off">
+      </div>
+      <div class="grid gap-3 mb-6 p-2 border-2 border-background rounded-xl bg-background/30 shadow-inner" style="grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); grid-template-rows: repeat(${rows}, auto); grid-auto-flow: column;">
+  `;
+  
+  hintData.forEach((h, i) => {
+    quizHtml += `
+        <div class="flex border-2 border-primary rounded-xl overflow-hidden shadow-sm bg-surface">
+          <div class="bg-background text-primary font-bold p-3 w-1/2 border-r-2 border-primary flex items-center justify-start text-left text-sm md:text-base">${h.hint || "?"}</div>
+          <div id="ans-${i}" class="p-3 w-1/2 font-black flex items-center justify-center text-center text-gray-300 transition-colors duration-300">???</div>
         </div>`;
-
-        document.getElementById('app-root').innerHTML = quizHtml;
-        App.setupTypingLogic(qData.correct_answer, hintData);
-    },
-
-    setupTypingLogic: (correctAnswerString, hintData) => {
-        State.quiz.typedAnswers = [];
-        const originalAnswers = correctAnswerString.split(',').map(a => a.trim());
-        const validAnswers = originalAnswers.map(a => a.toLowerCase());
-        
-        const input = document.getElementById('type-input');
-        const feedback = document.getElementById('feedback');
-        const timerDisplay = document.getElementById('timer-display');
-
-        let timeLeft = 60;
-        State.quiz.timerInterval = setInterval(() => {
-            timeLeft--;
-            timerDisplay.textContent = timeLeft;
-            if (timeLeft <= 0) App.finishQuiz(true); // Auto-finish if time runs out
-        }, 1000);
-
-        setTimeout(() => input.focus(), 100);
-
-        input.addEventListener('input', function () {
-            const guess = input.value.trim().toLowerCase();
-            if (guess === '') return;
-            
-            const matchIndex = validAnswers.findIndex(answer => answer === guess);
-            
-            if (matchIndex !== -1 && !State.quiz.typedAnswers.includes(validAnswers[matchIndex])) {
-                const matchedAnswer = originalAnswers[matchIndex];
-                State.quiz.typedAnswers.push(validAnswers[matchIndex]);
-                
-                const cell = document.getElementById(`ans-${matchIndex}`);
-                if (cell) {
-                    cell.textContent = matchedAnswer;
-                    cell.classList.remove('text-gray-300');
-                    cell.classList.add('text-white', 'bg-green-500', 'shadow-md');
-                }
-                
-                feedback.innerHTML = `<span class="text-green-500 fade-in"><i class="fas fa-star text-accent mr-2"></i> Found: ${State.quiz.typedAnswers.length} / ${validAnswers.length}</span>`;
-                input.value = '';
-                
-                if (State.quiz.typedAnswers.length === validAnswers.length) {
-                    App.finishQuiz(false); // Player won!
-                }
-            }
-        });
-    },
+  });
+  
+  quizHtml += `
+      </div>
+      <button onclick="App.finishQuiz()" id="finish-btn" class="btn-3d w-full bg-text-light text-white py-4 mt-4 rounded-xl font-black text-lg md:text-xl tracking-widest uppercase hover:bg-text-main transition-colors">Give Up / Finish</button>
+    </div>`;
+    
+  document.getElementById('app-root').innerHTML = quizHtml;
+  
+  // Pass the new totalTime to the logic function
+  App.setupTypingLogic(qData.correct_answer, hintData, totalTime);
+},
+    
+    // Add totalTime as the third parameter here
+setupTypingLogic: (correctAnswerString, hintData, totalTime) => {
+  State.quiz.typedAnswers = [];
+  const originalAnswers = correctAnswerString.split(',').map(a => a.trim());
+  const validAnswers = originalAnswers.map(a => a.toLowerCase());
+  const input = document.getElementById('type-input');
+  const feedback = document.getElementById('feedback');
+  const timerDisplay = document.getElementById('timer-display');
+  
+  // ⏱ Use the dynamic totalTime instead of a hardcoded 60
+  let timeLeft = totalTime;
+  
+  State.quiz.timerInterval = setInterval(() => {
+    timeLeft--;
+    timerDisplay.textContent = timeLeft;
+    if (timeLeft <= 0) App.finishQuiz(true); // Auto-finish if time runs out
+  }, 1000);
+  
+  setTimeout(() => input.focus(), 100);
+  
+  input.addEventListener('input', function () {
+    const guess = input.value.trim().toLowerCase();
+    if (guess === '') return;
+    const matchIndex = validAnswers.findIndex(answer => answer === guess);
+    
+    if (matchIndex !== -1 && !State.quiz.typedAnswers.includes(validAnswers[matchIndex])) {
+      const matchedAnswer = originalAnswers[matchIndex];
+      State.quiz.typedAnswers.push(validAnswers[matchIndex]);
+      const cell = document.getElementById(`ans-${matchIndex}`);
+      
+      if (cell) {
+        cell.textContent = matchedAnswer;
+        cell.classList.remove('text-gray-300');
+        cell.classList.add('text-white', 'bg-green-500', 'shadow-md');
+      }
+      
+      feedback.innerHTML = `<span class="text-green-500 fade-in"><i class="fas fa-star text-accent mr-2"></i> Found: ${State.quiz.typedAnswers.length} / ${validAnswers.length}</span>`;
+      input.value = '';
+      
+      if (State.quiz.typedAnswers.length === validAnswers.length) {
+        App.finishQuiz(false); // Player won!
+      }
+    }
+  });
+},
 
     finishQuiz: (timeExpired = false) => {
         State.clearTimer();
