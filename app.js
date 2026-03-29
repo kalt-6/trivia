@@ -115,24 +115,21 @@ window.App = {
 
         // Restored and updated dynamic icons!
         const getQuizIconData = (quiz) => {
-            const title = (quiz.title || "").toLowerCase();
-            if (title.includes('state') || title.includes('cit')) return { icon: 'fa-map', color: 'text-blue-500', bg: 'bg-blue-100' };
-            if (title.includes('ocean') || title.includes('continent') || title.includes('geography')) return { icon: 'fa-globe-americas', color: 'text-green-500', bg: 'bg-green-100' };
-            if (title.includes('countr') || title.includes('europ') || title.includes('capit')) return { icon: 'fa-landmark', color: 'text-purple-500', bg: 'bg-purple-100' };
-            if (title.includes('element') || title.includes('scienc')) return { icon: 'fa-flask', color: 'text-teal-500', bg: 'bg-teal-100' };
-            if (title.includes('planet') || title.includes('solar')) return { icon: 'fa-meteor', color: 'text-orange-500', bg: 'bg-orange-100' };
-            if (title.includes('harry potter') || title.includes('disney')) return { icon: 'fa-magic', color: 'text-pink-500', bg: 'bg-pink-100' };
-            if (title.includes('nfl') || title.includes('sport')) return { icon: 'fa-football-ball', color: 'text-orange-500', bg: 'bg-orange-100' };
-            if (title.includes('president')) return { icon: 'fa-flag-usa', color: 'text-red-500', bg: 'bg-red-100' };
-            if (title.includes('month') || title.includes('zodiac')) return { icon: 'fa-calendar-alt', color: 'text-indigo-500', bg: 'bg-indigo-100' };
-            
-            if (quiz.category === 'Geography') return { icon: 'fa-map-marked-alt', color: 'text-blue-500', bg: 'bg-blue-100' };
-            if (quiz.category === 'Science') return { icon: 'fa-microscope', color: 'text-teal-500', bg: 'bg-teal-100' };
-            if (quiz.category === 'Pop Culture') return { icon: 'fa-gamepad', color: 'text-pink-500', bg: 'bg-pink-100' };
-            if (quiz.category === 'History & Arts') return { icon: 'fa-palette', color: 'text-purple-500', bg: 'bg-purple-100' };
-            if (quiz.category === 'Sports & Food') return { icon: 'fa-football-ball', color: 'text-orange-500', bg: 'bg-orange-100' };
-            return { icon: 'fa-star', color: 'text-yellow-500', bg: 'bg-yellow-100' };
-        };
+  // 1. Pull the icon straight from your database (falls back to star if empty)
+  const iconClass = quiz.icon || 'fa-star'; 
+
+  // 2. Keep your dynamic colors based on the category
+  let color = 'text-yellow-500';
+  let bg = 'bg-yellow-100';
+
+  if (quiz.category === 'Geography') { color = 'text-blue-500'; bg = 'bg-blue-100'; }
+  else if (quiz.category === 'Science') { color = 'text-teal-500'; bg = 'bg-teal-100'; }
+  else if (quiz.category === 'Pop Culture') { color = 'text-pink-500'; bg = 'bg-pink-100'; }
+  else if (quiz.category === 'History & Arts') { color = 'text-purple-500'; bg = 'bg-purple-100'; }
+  else if (quiz.category === 'Sports & Food') { color = 'text-orange-500'; bg = 'bg-orange-100'; }
+
+  return { icon: iconClass, color: color, bg: bg };
+};
 
         displayedQuizzes.forEach((quiz) => {
             const safeTitle = (quiz.title || "Untitled").replace(/'/g, "\\'");
