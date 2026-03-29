@@ -115,20 +115,14 @@ window.App = {
 
         // Restored and updated dynamic icons!
         const getQuizIconData = (quiz) => {
-  // 1. Pull the icon straight from your database (falls back to star if empty)
-  const iconClass = quiz.icon || 'fa-star'; 
-
-  // 2. Keep your dynamic colors based on the category
-  let color = 'text-yellow-500';
-  let bg = 'bg-yellow-100';
-
-  if (quiz.category === 'Geography') { color = 'text-blue-500'; bg = 'bg-blue-100'; }
-  else if (quiz.category === 'Science') { color = 'text-teal-500'; bg = 'bg-teal-100'; }
-  else if (quiz.category === 'Pop Culture') { color = 'text-pink-500'; bg = 'bg-pink-100'; }
-  else if (quiz.category === 'History & Arts') { color = 'text-purple-500'; bg = 'bg-purple-100'; }
-  else if (quiz.category === 'Sports & Food') { color = 'text-orange-500'; bg = 'bg-orange-100'; }
-
-  return { icon: iconClass, color: color, bg: bg };
+  // Pull the theme word from the DB, default to yellow if empty
+  const theme = quiz.theme || 'yellow'; 
+  
+  return { 
+    icon: quiz.icon || 'fa-star', 
+    color: `text-${theme}-500`, 
+    bg: `bg-${theme}-100` 
+  };
 };
 
         displayedQuizzes.forEach((quiz) => {
